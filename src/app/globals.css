@@ -1,0 +1,157 @@
+@import "tailwindcss";
+
+/* ===== Дизайн-токены (хендофф Analytics BI) ===== */
+:root {
+  --bg: #f5f4f0;
+  --surface: #fffefb;
+  --sunk: #efeee9;
+  --ink: #1b1b16;
+  --ink-2: #4a4a42;
+  --muted: #7c7b71;
+  --line: #e2e0d8;
+  --line-2: #d3d0c6;
+  --accent: oklch(0.47 0.086 178);
+  --accent-ink: #ffffff;
+  --accent-soft: oklch(0.94 0.026 178);
+  --pos: oklch(0.52 0.11 150);
+  --neg: oklch(0.55 0.15 28);
+  /* категориальная палитра серий */
+  --c1: oklch(0.55 0.10 178);
+  --c2: oklch(0.66 0.13 68);
+  --c3: oklch(0.56 0.12 28);
+  --c4: oklch(0.55 0.09 245);
+  --c5: oklch(0.58 0.10 140);
+}
+
+:root[data-theme="dark"] {
+  --bg: #14161a;
+  --surface: #1a1d21;
+  --sunk: #202428;
+  --ink: #eceae4;
+  --ink-2: #b9b6ad;
+  --muted: #8a8880;
+  --line: #292d32;
+  --line-2: #363b41;
+  --accent: oklch(0.72 0.10 178);
+  --accent-ink: #10201f;
+  --accent-soft: oklch(0.30 0.045 178);
+  --pos: oklch(0.74 0.12 150);
+  --neg: oklch(0.68 0.15 28);
+  --c1: oklch(0.74 0.10 178);
+  --c2: oklch(0.78 0.12 68);
+  --c3: oklch(0.68 0.13 28);
+  --c4: oklch(0.70 0.09 245);
+  --c5: oklch(0.72 0.10 140);
+}
+
+/* системная тема до срабатывания скрипта */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #14161a;
+    --surface: #1a1d21;
+    --sunk: #202428;
+    --ink: #eceae4;
+    --ink-2: #b9b6ad;
+    --muted: #8a8880;
+    --line: #292d32;
+    --line-2: #363b41;
+    --accent: oklch(0.72 0.10 178);
+    --accent-ink: #10201f;
+    --accent-soft: oklch(0.30 0.045 178);
+    --pos: oklch(0.74 0.12 150);
+    --neg: oklch(0.68 0.15 28);
+    --c1: oklch(0.74 0.10 178);
+    --c2: oklch(0.78 0.12 68);
+    --c3: oklch(0.68 0.13 28);
+    --c4: oklch(0.70 0.09 245);
+    --c5: oklch(0.72 0.10 140);
+  }
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-sunk: var(--sunk);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-line-2: var(--line-2);
+  --color-accent: var(--accent);
+  --color-accent-ink: var(--accent-ink);
+  --color-accent-soft: var(--accent-soft);
+  --color-pos: var(--pos);
+  --color-neg: var(--neg);
+  --color-c1: var(--c1);
+  --color-c2: var(--c2);
+  --color-c3: var(--c3);
+  --color-c4: var(--c4);
+  --color-c5: var(--c5);
+  --font-sans: var(--font-instrument), system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains), ui-monospace, monospace;
+}
+
+html {
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-sans);
+}
+
+/* моноширинные цифры/метки – ключевой приём дизайна */
+.mono {
+  font-family: var(--font-mono);
+  font-feature-settings: "tnum" 1;
+}
+
+p {
+  text-wrap: pretty;
+}
+
+/* ===== react-day-picker под токены ===== */
+.rdp-wrap {
+  --rdp-accent-color: var(--accent);
+  --rdp-accent-background-color: var(--accent-soft);
+  --rdp-font-family: var(--font-sans);
+  --rdp-day-width: 34px;
+  --rdp-day-height: 34px;
+  --rdp-day_button-width: 34px;
+  --rdp-day_button-height: 34px;
+  --rdp-day_button-border-radius: 7px;
+  --rdp-selected-border: none;
+  --rdp-range_start-color: var(--accent-ink);
+  --rdp-range_end-color: var(--accent-ink);
+  --rdp-range_middle-background-color: var(--accent-soft);
+  --rdp-range_start-background: var(--accent);
+  --rdp-range_end-background: var(--accent);
+  --rdp-today-color: var(--accent);
+  color: var(--ink);
+  font-size: 13px;
+}
+.rdp-wrap .rdp-months {
+  flex-wrap: nowrap;
+  gap: 16px;
+}
+.rdp-wrap .rdp-month_caption {
+  font-size: 13.5px;
+  font-weight: 600;
+}
+.rdp-wrap .rdp-weekday {
+  color: var(--muted);
+  font-weight: 500;
+  text-transform: none;
+  font-size: 11.5px;
+}
+.rdp-wrap .rdp-day_button:hover {
+  background: var(--sunk);
+}
+.rdp-wrap .rdp-chevron {
+  fill: var(--muted);
+}
+.rdp-wrap .rdp-outside {
+  color: var(--muted);
+  opacity: 0.5;
+}
