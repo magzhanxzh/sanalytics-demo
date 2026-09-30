@@ -36,12 +36,12 @@ export function WidgetCard({
     })
       .then((r) => r.json())
       .then((d) => { if (alive) setData(d); })
-      .catch(() => { if (alive) setData({ kind: "error", message: "Ошибка сети" }); });
+      .catch(() => { if (alive) setData({ kind: "error", message: "Network error" }); });
     return () => { alive = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [JSON.stringify(widget), refreshKey]);
 
-  // Текстовый виджет
+  // Text widget
   if (isText) {
     return (
       <div className="border border-line bg-surface rounded-xl h-full flex flex-col overflow-hidden">
@@ -72,9 +72,9 @@ export function WidgetCard({
         </div>
         {editable && (
           <div className="flex items-center gap-0.5 no-drag shrink-0">
-            <button onClick={() => onDuplicate?.(widget)} className="text-muted hover:text-ink p-1" title="Дублировать"><Copy size={13} /></button>
-            <button onClick={() => onEdit?.(widget)} className="text-muted hover:text-ink p-1" title="Изменить"><Pencil size={14} /></button>
-            <button onClick={() => onRemove?.(widget)} className="text-muted hover:text-neg p-1" title="Удалить"><X size={15} /></button>
+            <button onClick={() => onDuplicate?.(widget)} className="text-muted hover:text-ink p-1" title="Duplicate"><Copy size={13} /></button>
+            <button onClick={() => onEdit?.(widget)} className="text-muted hover:text-ink p-1" title="Edit"><Pencil size={14} /></button>
+            <button onClick={() => onRemove?.(widget)} className="text-muted hover:text-neg p-1" title="Delete"><X size={15} /></button>
           </div>
         )}
       </div>

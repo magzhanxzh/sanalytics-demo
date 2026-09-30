@@ -4,57 +4,57 @@ import { defaultFilters, type CardFilters } from "@/lib/queries/cards";
 import { getSettings } from "@/lib/settings/store";
 import { enforceCountry } from "@/lib/auth/access";
 
-const SYSTEM = `Ты ИИ-аналитик витрины Sanalytics (e-commerce магазин с доставкой, рынки KZ/UZ/KG/TJ/MN).
-Отвечаешь на вопросы руководителя и маркетолога по РЕАЛЬНЫМ данным, которые получаешь только через инструменты.
+const SYSTEM = `You are the AI analyst of Sanalytics (an e-commerce store with delivery, markets KZ/UZ/KG/TJ/MN).
+You answer questions from executives and marketers using REAL data that you get only through tools.
 
-Модель данных:
-- «Канал заказа» (order channel) – витрина, через которую сделан заказ: store, marketplace_a, marketplace_b, express.
-- «Канал клиента» (user channel) – где пользователь зарегистрировался: app, web, partner.
-- Страна – страна пользователя (KZ Казахстан, UZ, KG, TJ, MN).
-- Метрики: регистрации, покупатели (сделали заказ), заказы, средний чек, вес (кг), выручка. Валюта – $.
-- «Конверсия» = покупатели / регистрации, и она имеет смысл ТОЛЬКО с периодом регистрации (когортой): тогда покупатели входят в когорту. Без когорты не считай конверсию.
-- Выручка: gross (валовая, sum цены) или paid (оплаченная). По умолчанию gross.
-- B2B: корпоративные аккаунты (>50 заказов/мес) можно исключать.
+Data model:
+- Order channel: the storefront the order was placed through: store, marketplace_a, marketplace_b, express.
+- User channel: where the user signed up: app, web, partner.
+- Country: the user's country (KZ Kazakhstan, UZ Uzbekistan, KG Kyrgyzstan, TJ Tajikistan, MN Mongolia).
+- Metrics: sign-ups, buyers (placed an order), orders, average check, weight (kg), revenue. Currency is USD.
+- Conversion = buyers / sign-ups, and it makes sense ONLY with a sign-up period (cohort): then buyers belong to the cohort. Without a cohort do not compute conversion.
+- Revenue: gross (sum of prices) or paid. Gross by default.
+- B2B: business accounts (>50 orders a month) can be excluded.
 
-Правила:
-- Основывай ответы ТОЛЬКО на числах из инструментов. НИКОГДА не выдумывай цифры.
-- Всегда указывай, какой срез использовал (период, страна, каналы).
-- Отвечай на русском, кратко и по делу, без длинного тире.
-- Это демо-стенд: данные синтетические, но считаются тем же слоем метрик, что и в продакшене.
-- Если период не задан – уточни или возьми разумный (например последние 30 дней) и скажи об этом.
-- Для вопросов «какой канал лучше/больше» используй get_channels.
-- Для сравнений (месяц к месяцу, канал vs канал) вызывай инструмент несколько раз.
-- Ты read-only: ничего не меняешь и не пишешь в базы.`;
+Rules:
+- Base answers ONLY on numbers from the tools. NEVER make up numbers.
+- Always state which slice you used (period, country, channels).
+- Answer in the user's language, briefly and to the point.
+- This is a demo: the data is synthetic but computed by the same metrics layer as in production.
+- If no period is given, ask or pick a reasonable one (for example the last 30 days) and say so.
+- For "which channel is best/biggest" questions use get_channels.
+- For comparisons (month over month, channel vs channel) call the tool several times.
+- You are read-only: you never change anything or write to databases.`;
 
 const tools: Anthropic.Tool[] = [
   {
     name: "get_metrics",
     description:
-      "Ключевые метрики за период по срезу: регистрации, покупатели, конверсия (только с когортой), заказы, средний чек, вес, выручка.",
+      "Key metrics for a period and slice: sign-ups, buyers, conversion (cohort only), orders, average check, weight, revenue.",
     input_schema: {
       type: "object",
       properties: {
-        from: { type: "string", description: "начало периода заказа YYYY-MM-DD" },
-        to: { type: "string", description: "конец периода заказа YYYY-MM-DD (включительно)" },
-        country: { type: "string", enum: ["KZ", "UZ", "KG", "TJ", "MN", "all"], description: "страна пользователя" },
-        orderCreator: { type: "string", description: "канал заказа или 'all'" },
-        userCreator: { type: "string", description: "канал регистрации или 'all'" },
-        basis: { type: "string", enum: ["gross", "paid"], description: "выручка валовая/оплаченная" },
-        excludeB2b: { type: "boolean", description: "исключать корпоративные аккаунты" },
-        regFrom: { type: "string", description: "период регистрации (когорта) с YYYY-MM-DD, опционально" },
-        regTo: { type: "string", description: "период регистрации (когорта) по YYYY-MM-DD, опционально" },
+        from: { type: "string", description: "order period start YYYY-MM-DD" },
+        to: { type: "string", description: "order period end YYYY-MM-DD (inclusive)" },
+        country: { type: "string", enum: ["KZ", "UZ", "KG", "TJ", "MN", "all"], description: "user country" },
+        orderCreator: { type: "string", description: "order channel or 'all'" },
+        userCreator: { type: "string", description: "sign-up channel or 'all'" },
+        basis: { type: "string", enum: ["gross", "paid"], description: "revenue gross or paid" },
+        excludeB2b: { type: "boolean", description: "exclude business accounts" },
+        regFrom: { type: "string", description: "sign-up period (cohort) from YYYY-MM-DD, optional" },
+        regTo: { type: "string", description: "sign-up period (cohort) to YYYY-MM-DD, optional" },
       },
       required: ["from", "to"],
     },
   },
   {
     name: "get_channels",
-    description: "Разбивка по каналам заказа за период: заказы, покупатели, выручка. Для вопросов какой канал лучше/больше.",
+    description: "Breakdown by order channel for a period: orders, buyers, revenue. For questions about which channel is best or biggest.",
     input_schema: {
       type: "object",
       properties: {
-        from: { type: "string", description: "начало периода YYYY-MM-DD" },
-        to: { type: "string", description: "конец периода YYYY-MM-DD (включительно)" },
+        from: { type: "string", description: "period start YYYY-MM-DD" },
+        to: { type: "string", description: "period end YYYY-MM-DD (inclusive)" },
         country: { type: "string", enum: ["KZ", "UZ", "KG", "TJ", "MN", "all"] },
         basis: { type: "string", enum: ["gross", "paid"] },
         excludeB2b: { type: "boolean" },
@@ -87,8 +87,8 @@ async function runTool(name: string, input: Record<string, unknown>) {
     f.country = await enforceCountry(f.country);
     const res = await getCards(f);
     return {
-      срез: { период: `${f.from}..${f.to}`, страна: f.country, каналЗаказа: f.orderCreator, каналКлиента: f.userCreator, когорта: f.regFrom ? `${f.regFrom}..${f.regTo}` : null, выручка: f.basis, безB2B: f.excludeB2b },
-      метрики: res.cards.map((c) => ({ показатель: c.title, значение: c.value, дельта: c.deltaPct })),
+      slice: { period: `${f.from}..${f.to}`, country: f.country, orderChannel: f.orderCreator, userChannel: f.userCreator, cohort: f.regFrom ? `${f.regFrom}..${f.regTo}` : null, revenue: f.basis, excludeB2b: f.excludeB2b },
+      metrics: res.cards.map((c) => ({ metric: c.title, value: c.value, delta: c.deltaPct })),
       error: res.error,
     };
   }
@@ -97,12 +97,12 @@ async function runTool(name: string, input: Record<string, unknown>) {
     f.country = await enforceCountry(f.country);
     const res = await getChannels(f);
     return {
-      срез: { период: `${f.from}..${f.to}`, страна: f.country, выручка: f.basis },
-      каналы: res.channels.map((c) => ({ канал: c.channel, заказы: c.orders, покупатели: c.buyers, выручка: c.revenue })),
+      slice: { period: `${f.from}..${f.to}`, country: f.country, revenue: f.basis },
+      channels: res.channels.map((c) => ({ channel: c.channel, orders: c.orders, buyers: c.buyers, revenue: c.revenue })),
       error: res.error,
     };
   }
-  return { error: `неизвестный инструмент ${name}` };
+  return { error: `unknown tool ${name}` };
 }
 
 export type ChatMessage = { role: "user" | "assistant"; content: string };
@@ -125,7 +125,7 @@ export async function runChat(history: ChatMessage[]): Promise<ChatResult> {
     });
 
     if (res.stop_reason === "refusal") {
-      return { reply: "Не могу ответить на этот запрос.", toolCalls };
+      return { reply: "I can't answer this request.", toolCalls };
     }
 
     if (res.stop_reason === "tool_use") {
@@ -149,47 +149,47 @@ export async function runChat(history: ChatMessage[]): Promise<ChatResult> {
       .map((b) => b.text)
       .join("\n")
       .trim();
-    return { reply: reply || "(пустой ответ)", toolCalls };
+    return { reply: reply || "(empty answer)", toolCalls };
   }
 
-  return { reply: "Слишком много шагов, попробуйте уточнить вопрос.", toolCalls };
+  return { reply: "Too many steps, try making the question more specific.", toolCalls };
 }
 
-// ---------- Демо без ключа Anthropic ----------
-// Без ANTHROPIC_API_KEY отвечаем шаблоном, но по настоящим числам из слоя метрик
-// (те же инструменты get_metrics / get_channels), чтобы было видно, как агент работает.
+// ---------- Demo without an Anthropic key ----------
+// Without ANTHROPIC_API_KEY we answer from a template, but with real numbers from the metrics layer
+// (the same get_metrics / get_channels tools), so you can see how the agent works.
 function iso(d: Date): string { return d.toISOString().slice(0, 10); }
 
 const NL = "\n";
-const money = (v: number) => "$" + Math.round(v).toLocaleString("ru-RU");
+const money = (v: number) => "$" + Math.round(v).toLocaleString("en-US");
 
 export async function runDemoChat(history: ChatMessage[]): Promise<ChatResult> {
   const q = (history[history.length - 1]?.content ?? "").toLowerCase();
   const to = new Date();
   const from = new Date(to.getTime() - 29 * 86_400_000);
-  const country = /узбек|\buz\b/.test(q) ? "UZ" : /кыргыз|\bkg\b/.test(q) ? "KG" : /все стран/.test(q) ? "all" : "KZ";
+  const country = /uzbek|\buz\b/.test(q) ? "UZ" : /kyrgyz|\bkg\b/.test(q) ? "KG" : /tajik|\btj\b/.test(q) ? "TJ" : /mongol|\bmn\b/.test(q) ? "MN" : /all countries/.test(q) ? "all" : "KZ";
   const period = { from: iso(from), to: iso(to), country };
-  const note = NL + NL + "Демо-ответ без ИИ: ключ ANTHROPIC_API_KEY не задан. Цифры посчитаны слоем метрик по демо-данным.";
+  const note = NL + NL + "Demo answer without AI: ANTHROPIC_API_KEY is not set. The numbers come from the metrics layer over demo data.";
 
-  if (/канал|channel|витрин/.test(q)) {
+  if (/channel|storefront|marketplace/.test(q)) {
     const input = { ...period };
-    const out = (await runTool("get_channels", input)) as { каналы?: { канал: string; заказы: number; покупатели: number; выручка: number }[] };
-    const rows = out.каналы ?? [];
-    const total = rows.reduce((s, r) => s + r.выручка, 0) || 1;
-    const lines = rows.map((r) => `• ${r.канал}: ${money(r.выручка)} (${((r.выручка / total) * 100).toFixed(1)}%), заказов ${r.заказы.toLocaleString("ru-RU")}`);
+    const out = (await runTool("get_channels", input)) as { channels?: { channel: string; orders: number; buyers: number; revenue: number }[] };
+    const rows = out.channels ?? [];
+    const total = rows.reduce((s, r) => s + r.revenue, 0) || 1;
+    const lines = rows.map((r) => `• ${r.channel}: ${money(r.revenue)} (${((r.revenue / total) * 100).toFixed(1)}%), ${r.orders.toLocaleString("en-US")} orders`);
     return {
-      reply: `Срез: ${period.from}..${period.to}, страна ${country}.` + NL + NL + lines.join(NL) + NL + NL +
-        `Больше всего выручки дал канал ${rows[0]?.канал ?? "?"}.` + note,
+      reply: `Slice: ${period.from}..${period.to}, country ${country}.` + NL + NL + lines.join(NL) + NL + NL +
+        `The top revenue channel is ${rows[0]?.channel ?? "?"}.` + note,
       toolCalls: [{ name: "get_channels", input }],
     };
   }
 
   const input = { ...period };
-  const out = (await runTool("get_metrics", input)) as { метрики?: { показатель: string; значение: string; дельта: number | null }[] };
-  const lines = (out.метрики ?? []).map((m) =>
-    `• ${m.показатель}: ${m.значение}` + (m.дельта == null ? "" : ` (${m.дельта > 0 ? "+" : ""}${m.дельта.toFixed(1)}% к прошлому периоду)`));
+  const out = (await runTool("get_metrics", input)) as { metrics?: { metric: string; value: string; delta: number | null }[] };
+  const lines = (out.metrics ?? []).map((m) =>
+    `• ${m.metric}: ${m.value}` + (m.delta == null ? "" : ` (${m.delta > 0 ? "+" : ""}${m.delta.toFixed(1)}% vs previous period)`));
   return {
-    reply: `Срез: последние 30 дней (${period.from}..${period.to}), страна ${country}, все каналы.` + NL + NL + lines.join(NL) + note,
+    reply: `Slice: last 30 days (${period.from}..${period.to}), country ${country}, all channels.` + NL + NL + lines.join(NL) + note,
     toolCalls: [{ name: "get_metrics", input }],
   };
 }

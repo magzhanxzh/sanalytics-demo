@@ -1,4 +1,4 @@
-// Мини-график в карточке KPI. Чистый SVG, без зависимостей.
+// Mini chart in a KPI card. Plain SVG, no dependencies.
 export function Sparkline({
   data,
   color,

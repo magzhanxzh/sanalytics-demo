@@ -1,20 +1,20 @@
 import "server-only";
 
-// Кеш результатов метрик + лог обновлений. В памяти процесса (в globalThis, чтобы
-// переживать HMR в dev). В продакшене кеш дополнительно персистится в файл на сервере,
-// чтобы переживать рестарт; в демо данные синтетические и считаются заново за миллисекунды.
-// Почему не общий кеш в Supabase: прогрев идёт без пользовательской сессии, а общий кеш,
-// читаемый любым залогиненным, обошёл бы гео-ограничения ролей.
+// Metric results cache + refresh log. In process memory (on globalThis so it
+// survives HMR in dev). In production the cache is also persisted to a file on the server
+// to survive restarts; in the demo data is synthetic and recomputes in milliseconds.
+// Why not a shared Supabase cache: warm-up runs without a user session, and a shared cache
+// readable by any signed-in user would bypass role geo restrictions.
 
-export const TTL_MS = 10 * 60 * 1000; // свежесть кеша 10 минут
+export const TTL_MS = 10 * 60 * 1000; // cache freshness 10 minutes
 
 type Entry<T> = { data: T; at: number };
 
 export type RunRecord = {
   at: number;
-  label: string; // человекочитаемый срез
+  label: string; // human-readable slice
   kind: "cards" | "daily";
-  ms: number; // длительность
+  ms: number; // duration
   ok: boolean;
   source: "request" | "schedule";
 };

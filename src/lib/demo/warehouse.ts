@@ -6,15 +6,15 @@ import {
   SOURCES_BY_COUNTRY, SOURCE_CONV, CAMPAIGNS,
 } from "./dims";
 
-// СИНТЕТИЧЕСКОЕ ХРАНИЛИЩЕ (демо-замена ClickHouse + PostgreSQL).
+// SYNTHETIC STORE (demo replacement for ClickHouse + PostgreSQL).
 //
-// В продакшене метрики считаются SQL-запросами к DWH. Здесь тот же набор фактов
-// (пользователи, заказы) генерируется детерминированно из seed и хранится колонками
-// в typed arrays, а запросы слоя метрик исполняются как сканы по этим колонкам.
-// Интерфейс функций повторяет форму SQL-агрегатов, поэтому слой метрик, кеш и
-// резолвер дашбордов работают поверх него без изменений.
+// In production metrics are SQL queries against the DWH. Here the same set of facts
+// (users, orders) is generated deterministically from a seed and stored as columns
+// in typed arrays, and the metrics layer queries run as scans over these columns.
+// The function interface mirrors the shape of the SQL aggregates, so the metrics layer, cache and
+// dashboard resolver run on top of it unchanged.
 //
-// Все даты – номер дня от эпохи (UTC). Окна полуоткрытые: [from, toExcl).
+// All dates are day numbers since the epoch (UTC). Windows are half-open: [from, toExcl).
 
 const SEED = 20240101;
 export const DAY_MS = 86_400_000;
@@ -24,20 +24,20 @@ export const dayOf = (iso: string): number => Math.floor(Date.parse(iso + "T00:0
 export const isoOf = (day: number): string => new Date(day * DAY_MS).toISOString().slice(0, 10);
 export const todayDay = (): number => Math.floor(Date.now() / DAY_MS);
 
-// AF-группа пользователя: как его видит MMP.
+// The user's AF group: how the MMP sees them.
 export const AF_TARGET = 0, AF_ORGANIC = 1, AF_RESTRICTED = 2, AF_NONE = 3;
 
 type Store = {
-  builtFor: number; // день, до которого сгенерированы данные
+  builtFor: number; // the day data is generated up to
   nUsers: number;
   uRegDay: Int32Array;
   uCountry: Uint8Array;
   uChannel: Uint8Array;
   uAfGroup: Uint8Array;
-  uAfSource: Uint8Array; // индекс AD_SOURCES (для target)
-  uCampaign: Int16Array; // индекс в campaignNames, -1 = нет
+  uAfSource: Uint8Array; // AD_SOURCES index (for paid)
+  uCampaign: Int16Array; // index into campaignNames, -1 = none
   uB2b: Uint8Array;
-  uOrdStart: Int32Array; // заказы пользователя: [uOrdStart[i], uOrdStart[i+1]) в порядке времени
+  uOrdStart: Int32Array; // user orders: [uOrdStart[i], uOrdStart[i+1]) in time order
   nOrders: number;
   oUser: Int32Array;
   oDay: Int32Array;
@@ -45,7 +45,7 @@ type Store = {
   oPrice: Float32Array;
   oWeight: Float32Array;
   oPaid: Uint8Array;
-  byDay: Int32Array;     // перестановка заказов, отсортированная по дню
+  byDay: Int32Array;     // order permutation sorted by day
   dayStart: Int32Array;  // byDay[dayStart[d-START_DAY] .. dayStart[d-START_DAY+1])
   campaignNames: string[];
 };
@@ -62,7 +62,7 @@ for (const [cc, list] of Object.entries(SOURCES_BY_COUNTRY)) {
   }
 }
 
-// Сколько регистраций в день: рост ~30% в год, сезонность, выходные, промо-всплески.
+// Sign-ups per day: ~30% yearly growth, seasonality, weekends, promo spikes.
 function regsForDay(day: number, rng: Rng): number {
   const d = new Date(day * DAY_MS);
   const years = (day - START_DAY) / 365;
@@ -91,9 +91,9 @@ function build(horizon: number): Store {
     oPaid.push(rng() < 0.93 ? 1 : 0);
   };
 
-  // B2B-аккаунты: немного корпоративных клиентов с десятками заказов в месяц.
+  // B2B accounts: a few business customers with dozens of orders a month.
   const b2bRng = mulberry32(hashSeed(SEED, 777));
-  const b2bRegDays = new Map<number, number>(); // день регистрации -> сколько B2B в этот день
+  const b2bRegDays = new Map<number, number>(); // sign-up day -> how many B2B that day
   for (let k = 0; k < 12; k++) {
     const day = START_DAY + 20 + Math.floor(b2bRng() * 560);
     b2bRegDays.set(day, (b2bRegDays.get(day) ?? 0) + 1);
@@ -112,7 +112,7 @@ function build(horizon: number): Store {
       const cc = COUNTRY_CODES[country];
       const channel = isB2b ? 1 : pick(rng, USER_CHANNEL_WEIGHTS);
 
-      // Как пользователя видит MMP: трекается только приложение.
+      // How the MMP sees the user: only the app is tracked.
       let afGroup = AF_NONE, afSource = 0, campaign = -1;
       if (channel === 0) {
         const r = rng();
@@ -134,7 +134,7 @@ function build(horizon: number): Store {
       uOrdStart.push(oUser.length);
 
       if (isB2b) {
-        // 55-90 заказов в месяц с момента регистрации
+        // 55-90 orders a month since sign-up
         let d = day + 1;
         const perMonth = 55 + Math.floor(rng() * 35);
         while (d <= horizon) {
@@ -145,22 +145,22 @@ function build(horizon: number): Store {
           }
           d += 30;
         }
-        // заказы B2B генерятся не по порядку дней – сортируем хвост пользователя
+        // B2B orders are generated out of day order, so sort the user's tail
         sortTail(oUser, oDay, oChannel, oPrice, oWeight, oPaid, uOrdStart[u]);
         continue;
       }
 
-      // Станет ли покупателем.
+      // Will they become a buyer.
       const countryConv = [1, 0.85, 0.9, 0.7, 0.8][country];
       const channelConv = [1, 0.8, 1.3][channel];
       const afConv = afGroup === AF_TARGET ? SOURCE_CONV[afSource] : afGroup === AF_ORGANIC ? 1.35 : 1;
       const pBuy = Math.min(0.9, 0.36 * countryConv * channelConv * afConv);
       if (rng() >= pBuy) continue;
 
-      // Первая покупка: чаще в первые дни, иногда через месяцы.
+      // First purchase: usually in the first days, sometimes months later.
       const rr = rng();
       let od = day + (rr < 0.62 ? Math.floor(rng() * 4) : rr < 0.84 ? 4 + Math.floor(rng() * 27) : 31 + Math.floor(exponential(rng, 70)));
-      // Клиенты из Meta чаще приходят на дешёвые импульсные покупки и реже возвращаются.
+      // Meta customers more often come for cheap impulse buys and return less.
       const isMeta = afGroup === AF_TARGET && afSource === 2;
       const priceMult = isMeta ? 0.25 : 1;
       const nOrders = 1 + Math.min(80, Math.floor(exponential(rng, Math.exp((isMeta ? 0.2 : 1) + 0.9 * normal(rng)))));
@@ -169,7 +169,7 @@ function build(horizon: number): Store {
       for (let j = 0; j < nOrders && od <= horizon; j++) {
         const ch = rng() < 0.75 ? primary : pick(rng, ORDER_CHANNEL_WEIGHTS);
         addOrder(u, od, ch, rng, ORDER_CHANNEL_MEDIAN_PRICE[ch] * priceMult);
-        // иногда клиент надолго пропадает и потом возвращается (реактивация)
+        // sometimes a customer disappears for a long time and then comes back (reactivation)
         const gap = rng() < 0.07 ? 180 + Math.floor(rng() * 240) : 1 + Math.floor(exponential(rng, gapMean));
         od += gap;
       }
@@ -178,7 +178,7 @@ function build(horizon: number): Store {
   const nUsers = uRegDay.length;
   uOrdStart.push(oUser.length);
 
-  // Индекс заказов по дням (сортировка подсчётом).
+  // Order index by day (counting sort).
   const nDays = horizon - START_DAY + 1;
   const counts = new Int32Array(nDays + 1);
   for (const d of oDay) counts[d - START_DAY + 1]++;
@@ -188,7 +188,7 @@ function build(horizon: number): Store {
   const byDay = new Int32Array(oDay.length);
   for (let i = 0; i < oDay.length; i++) byDay[cursor[oDay[i] - START_DAY]++] = i;
 
-  // B2B по обороту: > 50 заказов в каком-либо месяце.
+  // B2B by volume: > 50 orders in any month.
   const b2b = Uint8Array.from(uB2b);
   for (let u = 0; u < nUsers; u++) {
     const a = uOrdStart[u], b = uOrdStart[u + 1];
@@ -215,7 +215,7 @@ function build(horizon: number): Store {
   };
 }
 
-// Отсортировать по дню заказы одного пользователя начиная с позиции from.
+// Sort one user's orders by day starting at position from.
 function sortTail(
   user: number[], day: number[], ch: number[], price: number[], weight: number[], paid: number[], from: number,
 ) {
@@ -232,7 +232,7 @@ export function monthIndex(day: number): number {
   return d.getUTCFullYear() * 12 + d.getUTCMonth();
 }
 
-// Хранилище живёт в globalThis, чтобы переживать HMR в dev и не пересобираться на каждый запрос.
+// The store lives on globalThis to survive HMR in dev and not rebuild on every request.
 const g = globalThis as unknown as { __sanalyticsStore?: Store };
 export function store(): Store {
   const today = todayDay();
@@ -242,18 +242,18 @@ export function store(): Store {
 
 export const userIdOf = (u: number): string => "u" + String(100000 + u);
 
-/* ============================== Запросы ============================== */
+/* ============================== Queries ============================== */
 
 export type UserFilter = {
-  country?: string;      // код или 'all'
-  userChannel?: string;  // канал регистрации или 'all'
-  regFrom?: number;      // когорта: день регистрации с
-  regToExcl?: number;    // когорта: по (исключая)
+  country?: string;      // code or 'all'
+  userChannel?: string;  // sign-up channel or 'all'
+  regFrom?: number;      // cohort: sign-up day from
+  regToExcl?: number;    // cohort: to (exclusive)
 };
 export type OrderFilter = {
   from: number;
   toExcl: number;
-  orderChannel?: string; // канал заказа или 'all'
+  orderChannel?: string; // order channel or 'all'
   excludeB2b?: boolean;
 };
 
@@ -264,7 +264,7 @@ const orderChIdx = (c?: string) => (c && c !== "all" ? ORDER_CHANNELS.indexOf(c 
 function userPredicate(s: Store, f: UserFilter): (u: number) => boolean {
   const ci = countryIdx(f.country);
   const uc = userChIdx(f.userChannel);
-  const unknownCountry = f.country && f.country !== "all" && ci < 0; // напр. '__none__' = нет доступа
+  const unknownCountry = f.country && f.country !== "all" && ci < 0; // e.g. '__none__' = no access
   const unknownCh = f.userChannel && f.userChannel !== "all" && uc < 0;
   if (unknownCountry || unknownCh) return () => false;
   return (u) =>
@@ -274,7 +274,7 @@ function userPredicate(s: Store, f: UserFilter): (u: number) => boolean {
     (f.regToExcl === undefined || s.uRegDay[u] < f.regToExcl);
 }
 
-// Скан заказов окна с фильтрами по заказу и пользователю.
+// Scan the window's orders with order and user filters.
 function scanOrders(s: Store, of: OrderFilter, uf: UserFilter, fn: (o: number, u: number) => void) {
   const oc = orderChIdx(of.orderChannel);
   if (of.orderChannel && of.orderChannel !== "all" && oc < 0) return;
@@ -314,7 +314,7 @@ class AggBuilder {
   }
 }
 
-// Сводный агрегат за окно (аналог buildOverviewSql).
+// Summary aggregate for the window (like buildOverviewSql).
 export function queryOverview(of: OrderFilter, uf: UserFilter): Agg {
   const s = store();
   const acc = new AggBuilder();
@@ -322,7 +322,7 @@ export function queryOverview(of: OrderFilter, uf: UserFilter): Agg {
   return acc.done();
 }
 
-// Регистрации за окно (аналог buildRegistrationsSql).
+// Sign-ups for the window (like buildRegistrationsSql).
 export function queryRegistrations(uf: UserFilter & { regFrom: number; regToExcl: number }): number {
   const s = store();
   const keep = userPredicate(s, uf);
@@ -331,7 +331,7 @@ export function queryRegistrations(uf: UserFilter & { regFrom: number; regToExcl
   return n;
 }
 
-// Пользователи отсортированы по дню регистрации: бинарный поиск первого с regDay >= day.
+// Users are sorted by sign-up day: binary search for the first with regDay >= day.
 function lowerBoundUser(s: Store, day: number): number {
   let lo = 0, hi = s.nUsers;
   while (lo < hi) { const mid = (lo + hi) >> 1; if (s.uRegDay[mid] < day) lo = mid + 1; else hi = mid; }
@@ -346,7 +346,7 @@ export function bucketStart(day: number, grain: Grain): number {
   return Math.floor(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1) / DAY_MS);
 }
 
-// Ряд по бакетам (аналог buildDailySql): ключ = ISO даты начала бакета.
+// Series by bucket (like buildDailySql): key = ISO date of the bucket start.
 export function queryDaily(of: OrderFilter, uf: UserFilter, grain: Grain): Map<string, Agg> {
   const s = store();
   const buckets = new Map<number, AggBuilder>();
@@ -361,7 +361,7 @@ export function queryDaily(of: OrderFilter, uf: UserFilter, grain: Grain): Map<s
   return out;
 }
 
-// Регистрации по бакетам (аналог buildDailyRegSql).
+// Sign-ups by bucket (like buildDailyRegSql).
 export function queryDailyRegs(uf: UserFilter, from: number, toExcl: number, grain: Grain): Map<string, number> {
   const s = store();
   const keep = userPredicate(s, uf);
@@ -374,7 +374,7 @@ export function queryDailyRegs(uf: UserFilter, from: number, toExcl: number, gra
   return m;
 }
 
-// Разбивка по каналу заказа (аналог buildChannelsSql).
+// Breakdown by order channel (like buildChannelsSql).
 export function queryByOrderChannel(of: OrderFilter, uf: UserFilter): { channel: string; agg: Agg }[] {
   const s = store();
   const accs = ORDER_CHANNELS.map(() => new AggBuilder());
@@ -384,7 +384,7 @@ export function queryByOrderChannel(of: OrderFilter, uf: UserFilter): { channel:
     .sort((a, b) => b.agg.revenue - a.agg.revenue);
 }
 
-// Разбивка по стране пользователя (аналог buildCountrySql).
+// Breakdown by user country (like buildCountrySql).
 export function queryByCountry(of: OrderFilter): { country: string; agg: Agg }[] {
   const s = store();
   const accs = COUNTRY_CODES.map(() => new AggBuilder());
@@ -394,8 +394,8 @@ export function queryByCountry(of: OrderFilter): { country: string; agg: Agg }[]
     .sort((a, b) => b.agg.revenue - a.agg.revenue);
 }
 
-// Пер-пользовательские факты когорты для AF-анализа (аналог SQL когорты по пользователю):
-// все зарегистрированные в окне регистрации + их заказы в окне заказа. Страну не фильтруем.
+// Per-user cohort facts for Attribution (like the per-user cohort SQL):
+// everyone who signed up in the sign-up window + their orders in the order window. No country filter.
 export type CohortUserRow = {
   user_id: string; country: string; reg_day: string;
   orders: number; revenue: number; revenue_paid: number; weight: number;
@@ -427,15 +427,15 @@ export function queryCohortByUser(
   return rows;
 }
 
-// Реактивация (аналог buildReactivationSql): покупатель окна, у которого между «якорем»
-// (последний заказ до окна по всем каналам, а если заказов не было – регистрацией) и первым
-// заказом окна прошло >= dormancy дней. История до окна без нижней границы.
+// Reactivation (like buildReactivationSql): a buyer in the window for whom the gap between the "anchor"
+// (the last order before the window across all channels, or sign-up if there were no orders) and the first
+// order in the window is >= dormancy days. History before the window has no lower bound.
 export type ReactRow = { country: string; buyers: number; react: number; reactFirst: number; reactRepeat: number };
 export function queryReactivation(of: OrderFilter, uf: UserFilter, dormancy: number, byCountry: boolean): ReactRow[] {
   const s = store();
   const firstInWin = new Map<number, number>();
   scanOrders(s, { ...of, excludeB2b: false }, uf, (o, u) => {
-    if (!firstInWin.has(u)) firstInWin.set(u, s.oDay[o]); // скан идёт по возрастанию дня
+    if (!firstInWin.has(u)) firstInWin.set(u, s.oDay[o]); // the scan goes in ascending day order
   });
   const acc = new Map<string, ReactRow>();
   for (const [u, first] of firstInWin) {
@@ -460,13 +460,13 @@ export function queryReactivation(of: OrderFilter, uf: UserFilter, dormancy: num
 
 export type LtvUserFact = { cohortMonth: number; revenue: number; orders: number };
 export type LtvScan = {
-  cohortSize: Map<number, number>;                   // месяц когорты -> размер
-  perUser: LtvUserFact[];                            // покупатели сегмента (rev > 0)
-  cohortMol: Map<number, Map<number, number>>;       // когорта -> месяц жизни -> выручка
-  firstMol: Map<number, Map<number, number>>;        // когорта -> месяц первой покупки -> новых покупателей
+  cohortSize: Map<number, number>;                   // cohort month -> size
+  perUser: LtvUserFact[];                            // segment buyers (rev > 0)
+  cohortMol: Map<number, Map<number, number>>;       // cohort -> month of life -> revenue
+  firstMol: Map<number, Map<number, number>>;        // cohort -> first purchase month -> new buyers
 };
 
-// Один проход для LTV: юзеры, зарегистрированные в окне [winStart, winEnd), и их заказы в окне.
+// A single pass for LTV: users who signed up in [winStart, winEnd) and their orders in the window.
 export function scanLtv(winStart: number, winEnd: number, uf: UserFilter, orderChannel: string, excludeB2b: boolean): LtvScan {
   const s = store();
   const keep = userPredicate(s, uf);
@@ -505,7 +505,7 @@ export function scanLtv(winStart: number, winEnd: number, uf: UserFilter, orderC
 
 /* ------------------------------ AF / MMP ------------------------------ */
 
-// Пользователи, которых видит MMP, за окно регистрации (для суточной карты AF).
+// Users visible to the MMP for the sign-up window (for the daily AF map).
 export type AfUser = { userId: string; regDay: number; country: string; group: number; source: number; campaign: string };
 export function afUsers(from: number, toExcl: number): AfUser[] {
   const s = store();
@@ -521,15 +521,15 @@ export function afUsers(from: number, toExcl: number): AfUser[] {
   return out;
 }
 
-// Размер набора (для экрана синхронизации/интеграций).
+// Dataset size (for the Sync and Integrations screens).
 export function storeStats(): { users: number; orders: number; from: string; to: string } {
   const s = store();
   return { users: s.nUsers, orders: s.nOrders, from: isoOf(START_DAY), to: isoOf(s.builtFor) };
 }
 
-// Каналы привлечения: заказы периода, разложенные по рекламному источнику, через который
-// пользователь пришёл (атрибуция MMP хранится на пользователе). Плюс новые покупатели
-// периода (первый заказ за всю историю попал в окно) для CAC.
+// Acquisition channels: period orders split by the ad source the user came from
+// (MMP attribution is stored on the user). Plus new buyers in the period
+// (their first ever order falls in the window) for CAC.
 export type AcqRow = { source: number; orders: number; buyers: number; newBuyers: number; revenue: number; revenuePaid: number };
 export function queryAcquisition(of: OrderFilter, uf: UserFilter): { rows: AcqRow[]; total: Agg } {
   const s = store();

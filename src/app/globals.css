@@ -1,6 +1,6 @@
 @import "tailwindcss";
 
-/* ===== Дизайн-токены (хендофф Analytics BI) ===== */
+/* ===== Design tokens (Analytics BI handoff) ===== */
 :root {
   --bg: #f5f4f0;
   --surface: #fffefb;
@@ -15,7 +15,7 @@
   --accent-soft: oklch(0.94 0.026 178);
   --pos: oklch(0.52 0.11 150);
   --neg: oklch(0.55 0.15 28);
-  /* категориальная палитра серий */
+  /* categorical series palette */
   --c1: oklch(0.55 0.10 178);
   --c2: oklch(0.66 0.13 68);
   --c3: oklch(0.56 0.12 28);
@@ -44,7 +44,7 @@
   --c5: oklch(0.72 0.10 140);
 }
 
-/* системная тема до срабатывания скрипта */
+/* system theme before the script runs */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --bg: #14161a;
@@ -101,7 +101,7 @@ body {
   font-family: var(--font-sans);
 }
 
-/* моноширинные цифры/метки – ключевой приём дизайна */
+/* monospaced numbers and labels, a key design device */
 .mono {
   font-family: var(--font-mono);
   font-feature-settings: "tnum" 1;
@@ -111,7 +111,7 @@ p {
   text-wrap: pretty;
 }
 
-/* ===== react-day-picker под токены ===== */
+/* ===== react-day-picker on tokens ===== */
 .rdp-wrap {
   --rdp-accent-color: var(--accent);
   --rdp-accent-background-color: var(--accent-soft);

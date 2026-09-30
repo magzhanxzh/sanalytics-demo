@@ -1,6 +1,6 @@
-// Знак Sanalytics: четыре столбца-бара (последний короткий – «данные ещё идут»).
-// Рамка и короткие столбцы – --ink, два высоких – --accent. Меняется с темой.
-// Геометрия из brand/logo-mark-mono.svg.
+// Sanalytics mark: four bars (the last one is short, "data still coming in").
+// Frame and short bars use --ink, the two tall ones --accent. Follows the theme.
+// Geometry from brand/logo-mark-mono.svg.
 export function LogoMark({ size = 22 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 40 40" fill="none" aria-label="Sanalytics" role="img" style={{ display: "block" }}>

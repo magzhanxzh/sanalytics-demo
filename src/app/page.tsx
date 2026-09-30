@@ -3,20 +3,20 @@ import { ArrowRight, BarChart3, LayoutGrid, Bot, Bell, Plug, RefreshCw, Users, L
 import { LogoMark } from "@/components/LogoMark";
 import { ThemeToggle } from "@/components/ThemeToggle";
 
-// Публичный лендинг демо-стенда. Приложение живёт в route group (app) с сайдбаром.
+// Public landing page of the demo. The app itself lives in the (app) route group with a sidebar.
 
 const features = [
-  { icon: BarChart3, title: "Маркетинг", text: "KPI со сравнением периодов, динамика по дням, неделям и месяцам, когорты регистраций, экспорт в Excel." },
-  { icon: LineChart, title: "AF анализ", text: "Таргет против органики по карте MMP: регистрации, конверсия, выручка, CAC и ROAS по каналам и кампаниям." },
-  { icon: Users, title: "LTV", text: "Когортная ценность клиента на регистранта и на покупателя, кривые по месяцам жизни и треугольная матрица." },
-  { icon: LayoutGrid, title: "Конструктор дашбордов", text: "Виджеты KPI, графики и таблицы с drag-and-drop, фильтрами уровня дашборда и шарингом только для чтения." },
-  { icon: Bot, title: "ИИ-аналитик", text: "Claude с инструментами поверх слоя метрик. Отвечает только по числам из запросов и показывает, какой срез взял." },
-  { icon: Bell, title: "Алерты", text: "Правила на метрики с проверкой на текущих данных и доставкой в Telegram с антиспамом." },
-  { icon: Plug, title: "Интеграции", text: "ClickHouse, PostgreSQL, AppsFlyer, Google Ads, Meta Ads, TikTok Ads, Yandex Direct. Кабинеты по странам." },
-  { icon: RefreshCw, title: "Кеш и прогрев", text: "Единый кеш слоя метрик с TTL, прогрев по расписанию и журнал запусков на экране синхронизации." },
+  { icon: BarChart3, title: "Marketing", text: "KPIs with period comparison, daily, weekly and monthly trends, sign-up cohorts, Excel export." },
+  { icon: LineChart, title: "Attribution", text: "Paid vs organic from the MMP map: sign-ups, conversion, revenue, CAC and ROAS by channel and campaign." },
+  { icon: Users, title: "LTV", text: "Cohort customer value per sign-up and per buyer, curves by month of life and a triangle matrix." },
+  { icon: LayoutGrid, title: "Dashboard builder", text: "KPI widgets, charts and tables with drag-and-drop, dashboard-level filters and read-only sharing." },
+  { icon: Bot, title: "AI analyst", text: "Claude with tools over the metrics layer. It answers only with numbers from its queries and shows which slice it used." },
+  { icon: Bell, title: "Alerts", text: "Metric rules checked against live data, delivered to Telegram with anti-spam." },
+  { icon: Plug, title: "Integrations", text: "ClickHouse, PostgreSQL, AppsFlyer, Google Ads, Meta Ads, TikTok Ads, Yandex Direct. Ad accounts per country." },
+  { icon: RefreshCw, title: "Cache and warm-up", text: "A single metrics cache with TTL, scheduled warm-up and a run log on the sync screen." },
 ];
 
-const flow = ["Источники", "Коннекторы", "Слой метрик + кеш", "Дашборды, алерты, ИИ"];
+const flow = ["Data sources", "Connectors", "Metrics layer + cache", "Dashboards, alerts, AI"];
 
 export default function Landing() {
   return (
@@ -28,31 +28,31 @@ export default function Landing() {
         <div className="ml-auto flex items-center gap-3">
           <div style={{ width: 150 }}><ThemeToggle /></div>
           <Link href="/marketing" className="inline-flex items-center gap-1.5 text-[color:var(--accent-ink)]" style={{ background: "var(--accent)", borderRadius: 8, padding: "8px 14px", fontSize: 13, fontWeight: 500 }}>
-            Открыть демо <ArrowRight size={14} />
+            Open demo <ArrowRight size={14} />
           </Link>
         </div>
       </header>
 
       <main className="mx-auto" style={{ maxWidth: 1120, padding: "40px 24px 80px" }}>
         <section style={{ maxWidth: 760 }}>
-          <p className="mono text-accent" style={{ fontSize: 12, letterSpacing: "0.08em", textTransform: "uppercase" }}>BI для маркетинга e-commerce</p>
+          <p className="mono text-accent" style={{ fontSize: 12, letterSpacing: "0.08em", textTransform: "uppercase" }}>BI for e-commerce marketing</p>
           <h1 style={{ fontSize: "clamp(30px, 5vw, 46px)", lineHeight: 1.1, letterSpacing: "-0.025em", fontWeight: 650, marginTop: 14 }}>
-            Вся аналитика магазина в одном отчёте
+            All your store analytics in one report
           </h1>
           <p className="text-ink-2" style={{ fontSize: 16.5, lineHeight: 1.6, marginTop: 18 }}>
-            Sanalytics собирает заказы, регистрации, данные MMP и расход рекламных кабинетов в единый слой метрик.
-            Поверх него работают дашборды, когортный LTV, алерты и ИИ-аналитик, который отвечает по реальным цифрам.
+            Sanalytics combines orders, sign-ups, MMP attribution and ad spend into a single metrics layer.
+            On top of it run dashboards, cohort LTV, alerts and an AI analyst that answers with real numbers.
           </p>
           <div className="flex flex-wrap items-center gap-3" style={{ marginTop: 26 }}>
             <Link href="/marketing" className="inline-flex items-center gap-2 text-[color:var(--accent-ink)]" style={{ background: "var(--accent)", borderRadius: 9, padding: "11px 18px", fontSize: 14, fontWeight: 500 }}>
-              Открыть демо <ArrowRight size={15} />
+              Open demo <ArrowRight size={15} />
             </Link>
             <Link href="/dashboards" className="inline-flex items-center gap-2 border border-line bg-surface hover:border-line-2" style={{ borderRadius: 9, padding: "11px 18px", fontSize: 14 }}>
-              Конструктор дашбордов
+              Dashboard builder
             </Link>
           </div>
           <p className="text-muted" style={{ fontSize: 12.5, marginTop: 16 }}>
-            Демо-режим: все цифры синтетические и генерируются детерминированно. Входа нет, вы заходите как владелец.
+            Demo mode: all numbers are synthetic and generated deterministically. No sign-in, you are the owner.
           </p>
         </section>
 
@@ -81,7 +81,7 @@ export default function Landing() {
 
         <footer className="text-muted flex flex-wrap gap-x-6 gap-y-2" style={{ marginTop: 48, fontSize: 12.5 }}>
           <span>Next.js 16 · TypeScript · Tailwind 4 · Recharts · Claude API</span>
-          <span>Продакшен-версия работает на ClickHouse, PostgreSQL, Supabase и AppsFlyer</span>
+          <span>The production version runs on ClickHouse, PostgreSQL, Supabase and AppsFlyer</span>
         </footer>
       </main>
     </div>

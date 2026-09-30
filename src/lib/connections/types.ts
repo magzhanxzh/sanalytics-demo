@@ -1,6 +1,6 @@
-// Подключение к хранилищу ClickHouse (ClickHouse сам читает PostgreSQL через
-// табличный движок-мост, поэтому отдельные креды к PG не нужны). Управляется из UI
-// Интеграций; если задано, имеет приоритет над переменными окружения. В демо не используется.
+// ClickHouse warehouse connection (ClickHouse reads PostgreSQL itself through
+// a bridge table engine, so no separate PG credentials are needed). Managed from the Integrations
+// UI; when set, it takes priority over environment variables. Not used in the demo.
 export type ChConnection = {
   url: string;
   username: string;
@@ -12,9 +12,9 @@ export function emptyConnection(): ChConnection {
   return { url: "", username: "", password: "", database: "" };
 }
 
-// Пароль наружу (в браузер) не отдаём – только признак, что он задан.
+// The password is never sent to the browser, only a flag that it is set.
 export type ChConnectionView = {
-  source: "ui" | "env" | "none"; // откуда берётся активное подключение
+  source: "ui" | "env" | "none"; // where the active connection comes from
   url: string;
   username: string;
   database: string;

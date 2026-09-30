@@ -3,8 +3,8 @@
 import { useEffect, useState } from "react";
 import { COUNTRIES } from "@/lib/queries/cards";
 
-// allowed === null -> все страны (владелец/админ).
-// allowed === [...] -> только эти страны (маркетолог/наблюдатель). [] -> доступа нет.
+// allowed === null -> all countries (owner/admin).
+// allowed === [...] -> only these countries (marketer/viewer). [] -> no access.
 export type Access = { loading: boolean; allowed: string[] | null; role: string | null; canManage: boolean };
 
 export function useAccess(): Access {
@@ -23,7 +23,7 @@ export function useAccess(): Access {
   return state;
 }
 
-// Опции стран для выпадашки с учётом прав. Ограниченному – только его страны (без «Все»).
+// Country options for the dropdown given permissions. A restricted user gets only their countries (no "All").
 export function countryOptions(allowed: string[] | null): [string, string][] {
   if (allowed === null) return COUNTRIES.map((c) => [c.code, c.label]);
   return COUNTRIES.filter((c) => c.code !== "all" && allowed.includes(c.code)).map((c) => [c.code, c.label]);

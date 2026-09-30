@@ -17,8 +17,8 @@ function pointValue(metric: Metric, p: DailyPoint): number {
     case "registrations": return p.registrations;
     case "avg_check": return p.orders ? p.revenue / p.orders : 0;
     case "conversion": return p.registrations ? (p.buyers / p.registrations) * 100 : 0;
-    case "reactivation": return 0; // считается отдельной веткой (getReactivation)
-    default: return 0; // на случай устаревшей метрики в сохранённом виджете (напр. старый ltv)
+    case "reactivation": return 0; // computed in a separate branch (getReactivation)
+    default: return 0; // in case a saved widget has an outdated metric (e.g. old ltv)
   }
 }
 
@@ -28,14 +28,14 @@ function rowValue(metric: Metric, r: { orders: number; buyers: number; revenue: 
     case "orders": return r.orders;
     case "buyers": return r.buyers;
     case "avg_check": return r.orders ? r.revenue / r.orders : 0;
-    default: return null; // weight/registrations/conversion недоступны в разбивке по каналам/странам
+    default: return null; // weight/registrations/conversion are not available by channel or country
   }
 }
 
 const countryLabel = (code: string) => COUNTRIES.find((c) => c.code === code)?.label ?? code;
 
-// Гео-фильтр для разбивок по странам: null – без ограничений (owner/admin/прогрев),
-// иначе оставляем только строки из разрешённых пользователю стран.
+// Geo filter for country breakdowns: null means no restriction (owner/admin/warm-up),
+// otherwise keep only rows from countries the user is allowed to see.
 function keepCountry<T extends { country: string }>(rows: T[], allowed: string[] | null): T[] {
   if (!allowed) return rows;
   const set = new Set(allowed);
@@ -46,67 +46,67 @@ export async function resolveWidget(w: Widget, allowed: string[] | null = null):
   const f = toFilters(w);
 
   try {
-    // Реактивация – отдельная ветка (метрика со «спячкой»). Поддержка: KPI/таблица (общее число)
-    // и разбивка по странам. По дням/каналам не считаем (период-определение).
+    // Reactivation is a separate branch (a metric with dormancy). Supported: KPI/table (total)
+    // and a country breakdown. Not by day or channel (it is defined by the period).
     if (w.metric === "reactivation") {
       const dorm = w.filters.dormancyDays ?? 180;
       if (w.breakdown === "country") {
         const res = await getReactivationByCountry(f, dorm);
-        if (res.error) return { kind: "error", message: "Ошибка данных" };
+        if (res.error) return { kind: "error", message: "Data error" };
         const countries = keepCountry(res.countries, allowed);
         const items = countries.map((c) => ({ label: countryLabel(c.country), value: c.react })).filter((p) => p.value > 0).slice(0, 12);
         if (w.type === "table") {
-          return { kind: "table", columns: ["Страна", "Реактивировано", "Первый заказ", "Повторный", "Покупатели"], rows: countries.map((c) => [countryLabel(c.country), c.react, c.reactFirst, c.reactRepeat, c.buyers]) };
+          return { kind: "table", columns: ["Country", "Reactivated", "First order", "Repeat", "Buyers"], rows: countries.map((c) => [countryLabel(c.country), c.react, c.reactFirst, c.reactRepeat, c.buyers]) };
         }
-        if (items.length === 0) return { kind: "error", message: "Нет реактивированных за период" };
+        if (items.length === 0) return { kind: "error", message: "No reactivated customers in this period" };
         return { kind: "points", points: items };
       }
-      // none / kpi / прочее -> общее число реактивированных
+      // none / kpi / other -> total reactivated
       const res = await getReactivation(f, dorm);
-      if (res.error) return { kind: "error", message: "Ошибка данных" };
+      if (res.error) return { kind: "error", message: "Data error" };
       if (w.type === "table") {
-        return { kind: "table", columns: ["Показатель", "Значение"], rows: [
-          [`Реактивировано (спячка ≥ ${dorm} дн.)`, res.react.toLocaleString("ru-RU")],
-          ["Из них с первым заказом", res.reactFirst.toLocaleString("ru-RU")],
-          ["Из них повторных", res.reactRepeat.toLocaleString("ru-RU")],
-          ["Доля первых заказов", (res.react ? (res.reactFirst / res.react) * 100 : 0).toFixed(1) + "%"],
-          ["Покупателей за период", res.buyers.toLocaleString("ru-RU")],
-          ["Доля реактивации", (res.buyers ? (res.react / res.buyers) * 100 : 0).toFixed(1) + "%"],
+        return { kind: "table", columns: ["Metric", "Value"], rows: [
+          [`Reactivated (dormancy ≥ ${dorm} d)`, res.react.toLocaleString("en-US")],
+          ["Of them, first order", res.reactFirst.toLocaleString("en-US")],
+          ["Of them, repeat", res.reactRepeat.toLocaleString("en-US")],
+          ["First order share", (res.react ? (res.reactFirst / res.react) * 100 : 0).toFixed(1) + "%"],
+          ["Buyers in period", res.buyers.toLocaleString("en-US")],
+          ["Reactivation share", (res.buyers ? (res.react / res.buyers) * 100 : 0).toFixed(1) + "%"],
         ] };
       }
       return { kind: "value", value: res.react };
     }
 
-    // KPI – одно число
+    // KPI: a single number
     if (w.type === "kpi") {
       const res = await getCards(f);
-      if (res.error) return { kind: "error", message: "Ошибка данных" };
+      if (res.error) return { kind: "error", message: "Data error" };
       const raw = res.raw;
-      if (!raw) return { kind: "error", message: "Нет данных" };
+      if (!raw) return { kind: "error", message: "No data" };
       const v = pointValue(w.metric, {
         date: "", revenue: raw.revenue, orders: raw.orders, buyers: raw.buyers, weight: raw.weight, registrations: raw.registrations,
       });
       return { kind: "value", value: v };
     }
 
-    // Таблица
+    // Table
     if (w.type === "table") {
       if (w.breakdown === "channel" || w.breakdown === "country") {
         const rows = w.breakdown === "channel"
           ? (await getChannels(f)).channels.map((c) => [c.channel, c.orders, c.buyers, Math.round(c.revenue)])
           : keepCountry((await getByCountry(f)).countries, allowed).map((c) => [countryLabel(c.country), c.orders, c.buyers, Math.round(c.revenue)]);
-        return { kind: "table", columns: [w.breakdown === "channel" ? "Канал" : "Страна", "Заказы", "Покупатели", "Выручка"], rows };
+        return { kind: "table", columns: [w.breakdown === "channel" ? "Channel" : "Country", "Orders", "Buyers", "Revenue"], rows };
       }
       if (w.breakdown === "none") {
         const res = await getCards(f);
-        return { kind: "table", columns: ["Показатель", "Значение"], rows: res.cards.map((c) => [c.title, c.value]) };
+        return { kind: "table", columns: ["Metric", "Value"], rows: res.cards.map((c) => [c.title, c.value]) };
       }
-      // разбивка по времени
+      // time breakdown
       const daily = await getDaily(f);
-      return { kind: "table", columns: ["Период", "Значение"], rows: daily.points.map((p) => [p.date, Math.round(pointValue(w.metric, p) * 100) / 100]) };
+      return { kind: "table", columns: ["Period", "Value"], rows: daily.points.map((p) => [p.date, Math.round(pointValue(w.metric, p) * 100) / 100]) };
     }
 
-    // Разбивка по каналам/странам (bar/pie)
+    // Breakdown by channel or country (bar/pie)
     if (w.breakdown === "channel" || w.breakdown === "country") {
       const items = w.breakdown === "channel"
         ? (await getChannels(f)).channels.map((c) => ({ label: c.channel, ...c }))
@@ -115,13 +115,13 @@ export async function resolveWidget(w: Widget, allowed: string[] | null = null):
         .map((it) => ({ label: it.label, value: rowValue(w.metric, it) }))
         .filter((p): p is { label: string; value: number } => p.value !== null)
         .slice(0, 12);
-      if (points.length === 0) return { kind: "error", message: "Метрика недоступна в этой разбивке" };
+      if (points.length === 0) return { kind: "error", message: "Metric not available in this breakdown" };
       return { kind: "points", points };
     }
 
-    // Временной ряд (line/area/bar по времени)
+    // Time series (line/area/bar over time)
     const daily = await getDaily(f);
-    if (daily.error) return { kind: "error", message: "Ошибка данных" };
+    if (daily.error) return { kind: "error", message: "Data error" };
     return { kind: "points", points: daily.points.map((p) => ({ label: p.date, value: pointValue(w.metric, p) })) };
   } catch (err) {
     return { kind: "error", message: String(err).slice(0, 120) };

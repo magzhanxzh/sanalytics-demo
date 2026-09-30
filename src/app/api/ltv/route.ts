@@ -10,7 +10,7 @@ export async function GET(request: Request) {
   const country = await enforceCountry(sp.get("country") || "KZ");
   const orderCreator = sp.get("ocreator") || "store";
   const userCreator = sp.get("ucreator") || "all";
-  const excludeB2b = sp.get("b2b") !== "include"; // по умолчанию B2B исключён (как в отчёте)
+  const excludeB2b = sp.get("b2b") !== "include"; // B2B excluded by default (as in the report)
   const data = await buildLtv({ country, orderCreator, userCreator, excludeB2b });
   return NextResponse.json(data);
 }

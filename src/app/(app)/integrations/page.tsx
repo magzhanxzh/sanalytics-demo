@@ -33,16 +33,16 @@ function Card({ ab, name, type, desc, pill, detail }: { ab: string; name: string
   );
 }
 
-// Ещё не реализованные коннекторы (нужны отдельные API/интеграции).
+// Connectors not implemented yet (they need separate APIs).
 const soon = [
-  { ab: "ST", name: "Stripe", type: "платежи", desc: "Транзакции и статусы оплат." },
-  { ab: "AM", name: "amoCRM", type: "CRM", desc: "Сделки, воронка, менеджеры." },
+  { ab: "ST", name: "Stripe", type: "payments", desc: "Transactions and payment statuses." },
+  { ab: "AM", name: "amoCRM", type: "CRM", desc: "Deals, pipeline, sales reps." },
 ];
 
 export default function Page() {
   return (
     <>
-      <AppHeader title="Интеграции" subtitle="Источники данных, рекламные кабинеты и расход" />
+      <AppHeader title="Integrations" subtitle="Data sources, ad accounts and spend" />
       <div style={{ padding: "22px 28px 60px", display: "flex", flexDirection: "column", gap: 28 }}>
         <div><ConnectedSources /></div>
 
@@ -54,22 +54,22 @@ export default function Page() {
         </div>
 
         <div>
-          <h2 className="font-semibold" style={{ fontSize: 15, marginBottom: 4 }}>Рекламные кабинеты (по странам)</h2>
-          <p className="text-muted" style={{ fontSize: 12.5, marginBottom: 12 }}>Google Ads, Meta Ads, TikTok Ads, Yandex Direct. По кабинету на каждую страну, расход привязывается к стране кабинета. В демо кабинеты заведены заранее, расход синтетический.</p>
+          <h2 className="font-semibold" style={{ fontSize: 15, marginBottom: 4 }}>Ad accounts (per country)</h2>
+          <p className="text-muted" style={{ fontSize: 12.5, marginBottom: 12 }}>Google Ads, Meta Ads, TikTok Ads, Yandex Direct. One account per country, spend is attributed to the accoun’s country. In the demo the accounts are pre-configured and spend is synthetic.</p>
           <AdAccountsPanel />
         </div>
 
         <div>
-          <h2 className="font-semibold" style={{ fontSize: 15, marginBottom: 4 }}>Уведомления</h2>
-          <p className="text-muted" style={{ fontSize: 12.5, marginBottom: 12 }}>Вставьте ключи, нажмите «Проверить», затем «Включён». Секреты хранятся на сервере. В демо-режиме проверки и отправки не уходят во внешние API.</p>
+          <h2 className="font-semibold" style={{ fontSize: 15, marginBottom: 4 }}>Notifications</h2>
+          <p className="text-muted" style={{ fontSize: 12.5, marginBottom: 12 }}>Paste your keys, click “Test”, then “Enabled”. Secrets stay on the server. In demo mode tests and messages never reach external APIs.</p>
           <ConnectorsPanel />
         </div>
 
         <div>
-          <h2 className="font-semibold" style={{ fontSize: 15, marginBottom: 12 }}>Скоро</h2>
+          <h2 className="font-semibold" style={{ fontSize: 15, marginBottom: 12 }}>Coming soon</h2>
           <div className="grid" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 14 }}>
             {soon.map((s) => (
-              <Card key={s.ab} ab={s.ab} name={s.name} type={s.type} desc={s.desc} pill={<Pill text="скоро" kind="soon" />} detail="позже" />
+              <Card key={s.ab} ab={s.ab} name={s.name} type={s.type} desc={s.desc} pill={<Pill text="soon" kind="soon" />} detail="later" />
             ))}
           </div>
         </div>

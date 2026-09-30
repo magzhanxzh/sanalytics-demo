@@ -6,9 +6,9 @@ type Msg = { role: "user" | "assistant"; content: string };
 type ToolCall = { name: string; input: Record<string, unknown> };
 
 const STARTERS = [
-  "Выручка за последние 30 дней по Казахстану",
-  "Какой канал заказа дал больше всего выручки за прошлый месяц?",
-  "Метрики по Узбекистану за 30 дней",
+  "Revenue for the last 30 days in Kazakhstan",
+  "Which order channel brought the most revenue last month?",
+  "Uzbekistan metrics for 30 days",
 ];
 
 function Role({ children }: { children: string }) {
@@ -43,10 +43,10 @@ export function AiChat() {
         body: JSON.stringify({ messages: next }),
       });
       const data = await res.json();
-      setMessages((m) => [...m, { role: "assistant", content: data.reply ?? "(нет ответа)" }]);
+      setMessages((m) => [...m, { role: "assistant", content: data.reply ?? "(no answer)" }]);
       setToolCalls(Array.isArray(data.toolCalls) ? data.toolCalls : []);
     } catch {
-      setMessages((m) => [...m, { role: "assistant", content: "Ошибка сети. Попробуйте ещё раз." }]);
+      setMessages((m) => [...m, { role: "assistant", content: "Network error. Please try again." }]);
     } finally {
       setLoading(false);
       setTimeout(() => listRef.current?.scrollTo(0, listRef.current.scrollHeight), 50);
@@ -55,12 +55,12 @@ export function AiChat() {
 
   return (
     <div className="grid" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: 18, alignItems: "start" }}>
-      {/* Чат */}
+      {/* Chat */}
       <div className="border border-line bg-surface rounded-xl flex flex-col" style={{ minHeight: 560 }}>
         <div ref={listRef} className="flex-1 flex flex-col gap-5 overflow-y-auto" style={{ padding: 22, maxHeight: 560 }}>
           {messages.length === 0 && (
             <div className="text-muted" style={{ fontSize: 13.5 }}>
-              Спросите про выручку, каналы, когорты, конверсию. Примеры ниже.
+              Ask about revenue, channels, cohorts, conversion. Examples below.
               <div className="flex flex-col gap-2" style={{ marginTop: 14 }}>
                 {STARTERS.map((s) => (
                   <button key={s} onClick={() => send(s)} className="text-left bg-sunk hover:border-accent border border-transparent transition-colors" style={{ borderRadius: 8, padding: "10px 12px", fontSize: 13 }}>
@@ -72,7 +72,7 @@ export function AiChat() {
           )}
           {messages.map((m, i) => (
             <div key={i}>
-              <Role>{m.role === "user" ? "Вы" : "ИИ-аналитик"}</Role>
+              <Role>{m.role === "user" ? "You" : "AI analyst"}</Role>
               {m.role === "user" ? (
                 <span className="inline-block bg-sunk border border-line" style={{ borderRadius: 10, padding: "12px 14px", fontSize: 14, lineHeight: 1.55 }}>
                   {m.content}
@@ -86,8 +86,8 @@ export function AiChat() {
           ))}
           {loading && (
             <div>
-              <Role>ИИ-аналитик</Role>
-              <p className="text-muted" style={{ fontSize: 14 }}>Считаю по данным…</p>
+              <Role>AI analyst</Role>
+              <p className="text-muted" style={{ fontSize: 14 }}>Crunching the numbers…</p>
             </div>
           )}
         </div>
@@ -99,22 +99,22 @@ export function AiChat() {
           <input
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="Спросите о выручке, каналах, когортах…"
+            placeholder="Ask about revenue, channels, cohorts…"
             className="flex-1 bg-transparent outline-none"
             style={{ fontSize: 13.5 }}
           />
           <button type="submit" disabled={loading} className="text-[color:var(--accent-ink)] disabled:opacity-60" style={{ background: "var(--accent)", borderRadius: 7, padding: "8px 14px", fontSize: 12.5, fontWeight: 500 }}>
-            Отправить
+            Send
           </button>
         </form>
       </div>
 
-      {/* Контекст + история */}
+      {/* Context + history */}
       <div className="flex flex-col gap-4">
         <div className="border border-line bg-surface rounded-xl" style={{ padding: 16 }}>
-          <div style={{ fontSize: 13.5, fontWeight: 600, marginBottom: 6 }}>Контекст ответа</div>
+          <div style={{ fontSize: 13.5, fontWeight: 600, marginBottom: 6 }}>Answer context</div>
           {toolCalls.length === 0 ? (
-            <p className="text-muted" style={{ fontSize: 12.5 }}>Здесь появятся запросы к данным, на которых построен ответ.</p>
+            <p className="text-muted" style={{ fontSize: 12.5 }}>The data queries behind the answer will appear here.</p>
           ) : (
             <div className="flex flex-col gap-2">
               {toolCalls.map((t, i) => (
@@ -129,9 +129,9 @@ export function AiChat() {
           )}
         </div>
         <div className="border border-line bg-surface rounded-xl" style={{ padding: 16 }}>
-          <div style={{ fontSize: 13.5, fontWeight: 600, marginBottom: 8 }}>История</div>
+          <div style={{ fontSize: 13.5, fontWeight: 600, marginBottom: 8 }}>History</div>
           {history.length === 0 ? (
-            <p className="text-muted" style={{ fontSize: 12.5 }}>Ваши прошлые вопросы появятся здесь.</p>
+            <p className="text-muted" style={{ fontSize: 12.5 }}>Your past questions will appear here.</p>
           ) : (
             history.map((h, i) => (
               <button key={i} onClick={() => send(h)} className="block text-left text-ink-2 hover:text-ink w-full" style={{ fontSize: 12.5, padding: "6px 0" }}>

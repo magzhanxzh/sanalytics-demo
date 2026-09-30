@@ -38,7 +38,7 @@ export function AdAccountsPanel() {
     setTesting(a.id); setResult((r) => ({ ...r, [a.id]: undefined as never }));
     try {
       const d = await (await fetch("/api/ad-accounts/test", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: a.id }) })).json();
-      setResult((r) => ({ ...r, [a.id]: { ok: !!d.ok, text: d.ok ? (d.detail || "подключение работает") : (d.error || "ошибка") } }));
+      setResult((r) => ({ ...r, [a.id]: { ok: !!d.ok, text: d.ok ? (d.detail || "connection works") : (d.error || "error") } }));
     } catch (e) { setResult((r) => ({ ...r, [a.id]: { ok: false, text: String(e).slice(0, 140) } })); }
     finally { setTesting(null); }
   }
@@ -48,28 +48,28 @@ export function AdAccountsPanel() {
     load();
   }
 
-  if (!data) return <div className="text-muted" style={{ fontSize: 13 }}>Загрузка…</div>;
+  if (!data) return <div className="text-muted" style={{ fontSize: 13 }}>Loading…</div>;
 
   return (
     <div>
       <div className="flex items-center justify-between" style={{ marginBottom: 12 }}>
-        <p className="text-muted" style={{ fontSize: 12.5 }}>Несколько кабинетов на площадку – по одному на страну. Расход каждого привязывается к его стране.</p>
+        <p className="text-muted" style={{ fontSize: 12.5 }}>Several accounts per platform, one per country. Each accoun’s spend is attributed to its country.</p>
         {data.canManage && (
           <button onClick={() => setEditing("new")} className="inline-flex items-center gap-1.5 text-[color:var(--accent-ink)]" style={{ background: "var(--accent)", borderRadius: 8, padding: "7px 12px", fontSize: 12.5, fontWeight: 500 }}>
-            <Plus size={14} /> Добавить кабинет
+            <Plus size={14} /> Add account
           </button>
         )}
       </div>
 
       {data.accounts.length === 0 ? (
         <div className="border border-dashed border-line-2 rounded-xl text-center text-muted" style={{ padding: "28px 20px", fontSize: 13 }}>
-          Кабинетов пока нет. {data.canManage ? "Нажмите «Добавить кабинет»." : "Добавить может владелец/админ."}
+          No accounts yet. {data.canManage ? "Click \"Add account\"." : "Only the owner or an admin can add one."}
         </div>
       ) : (
         <div className="grid" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 14 }}>
           {data.accounts.map((a) => {
             const res = result[a.id];
-            const pill = a.enabled && a.configured ? <Pill text="подключён" kind="ok" /> : a.configured ? <Pill text="настроен" kind="warn" /> : <Pill text="не настроен" kind="soon" />;
+            const pill = a.enabled && a.configured ? <Pill text="connected" kind="ok" /> : a.configured ? <Pill text="configured" kind="warn" /> : <Pill text="not configured" kind="soon" />;
             return (
               <div key={a.id} className="border border-line bg-surface rounded-xl flex flex-col" style={{ padding: 16, gap: 12 }}>
                 <div className="flex items-center gap-3">
@@ -90,27 +90,27 @@ export function AdAccountsPanel() {
                   {data.canManage ? (
                     <>
                       <label className="flex items-center gap-1.5 cursor-pointer text-muted" style={{ fontSize: 12 }}>
-                        <input type="checkbox" checked={a.enabled} disabled={!a.configured} onChange={(e) => toggle(a, e.target.checked)} /> Включён
+                        <input type="checkbox" checked={a.enabled} disabled={!a.configured} onChange={(e) => toggle(a, e.target.checked)} /> Enabled
                       </label>
                       <div className="flex items-center gap-2">
                         {confirmId === a.id ? (
                           <span className="inline-flex items-center gap-2" style={{ fontSize: 12 }}>
-                            <span className="text-muted">Удалить?</span>
-                            <button onClick={() => remove(a)} className="text-[color:var(--neg)]" style={{ fontWeight: 600 }}>Да</button>
-                            <button onClick={() => setConfirmId(null)} className="text-muted hover:text-ink">Нет</button>
+                            <span className="text-muted">Delete?</span>
+                            <button onClick={() => remove(a)} className="text-[color:var(--neg)]" style={{ fontWeight: 600 }}>Yes</button>
+                            <button onClick={() => setConfirmId(null)} className="text-muted hover:text-ink">No</button>
                           </span>
                         ) : (
                           <>
                             <button onClick={() => test(a)} disabled={!a.configured || testing === a.id} className="inline-flex items-center gap-1 text-muted hover:text-ink disabled:opacity-40" style={{ fontSize: 12 }}>
-                              {testing === a.id ? <Loader2 size={13} className="animate-spin" /> : null} Проверить
+                              {testing === a.id ? <Loader2 size={13} className="animate-spin" /> : null} Test
                             </button>
-                            <button onClick={() => setEditing(a)} className="text-muted hover:text-ink" title="Настроить"><Settings2 size={13} /></button>
-                            <button onClick={() => setConfirmId(a.id)} className="text-muted hover:text-[color:var(--neg)]" title="Удалить"><Trash2 size={13} /></button>
+                            <button onClick={() => setEditing(a)} className="text-muted hover:text-ink" title="Configure"><Settings2 size={13} /></button>
+                            <button onClick={() => setConfirmId(a.id)} className="text-muted hover:text-[color:var(--neg)]" title="Delete"><Trash2 size={13} /></button>
                           </>
                         )}
                       </div>
                     </>
-                  ) : <span className="text-muted mono" style={{ fontSize: 11 }}>только чтение</span>}
+                  ) : <span className="text-muted mono" style={{ fontSize: 11 }}>read only</span>}
                 </div>
               </div>
             );
@@ -145,7 +145,7 @@ function AccountEditor({ specs, countries, account, onClose, onSaved }: {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
 
-  // при смене площадки – сбросить поля под её спеку
+  // when the platform changes, reset the fields to its spec
   function changeProvider(p: string) {
     setProvider(p);
     const sp = specs.find((s) => s.id === p)!;
@@ -159,7 +159,7 @@ function AccountEditor({ specs, countries, account, onClose, onSaved }: {
     try {
       const r = await fetch("/api/ad-accounts", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: account?.id, provider, country, fields }) });
       const d = await r.json();
-      if (!r.ok) { setErr(d.error || "не удалось сохранить"); return; }
+      if (!r.ok) { setErr(d.error || "could not save"); return; }
       onSaved();
     } catch (e) { setErr(String(e).slice(0, 160)); }
     finally { setBusy(false); }
@@ -170,19 +170,19 @@ function AccountEditor({ specs, countries, account, onClose, onSaved }: {
     <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: "rgba(0,0,0,0.35)" }} onClick={onClose}>
       <div className="bg-surface border border-line rounded-xl w-full" style={{ maxWidth: 520, maxHeight: "90vh", overflow: "auto" }} onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between border-b border-line" style={{ padding: "14px 18px" }}>
-          <h2 className="font-semibold" style={{ fontSize: 15 }}>{account ? "Кабинет" : "Новый кабинет"}</h2>
+          <h2 className="font-semibold" style={{ fontSize: 15 }}>{account ? "Ad account" : "New ad account"}</h2>
           <button onClick={onClose} className="text-muted hover:text-ink"><X size={18} /></button>
         </div>
         <div className="flex flex-col gap-3" style={{ padding: 18 }}>
           <div className="grid grid-cols-2 gap-3">
             <label className="flex flex-col gap-1">
-              <span className="text-muted" style={{ fontSize: 11.5 }}>Площадка</span>
+              <span className="text-muted" style={{ fontSize: 11.5 }}>Platform</span>
               <select value={provider} onChange={(e) => changeProvider(e.target.value)} disabled={!!account} className="border border-line bg-surface rounded-lg disabled:opacity-60" style={inp}>
                 {specs.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
               </select>
             </label>
             <label className="flex flex-col gap-1">
-              <span className="text-muted" style={{ fontSize: 11.5 }}>Страна</span>
+              <span className="text-muted" style={{ fontSize: 11.5 }}>Country</span>
               <select value={country} onChange={(e) => setCountry(e.target.value)} className="border border-line bg-surface rounded-lg" style={inp}>
                 {countries.map((c) => <option key={c.code} value={c.code}>{c.label}</option>)}
               </select>
@@ -190,23 +190,23 @@ function AccountEditor({ specs, countries, account, onClose, onSaved }: {
           </div>
           {spec.fields.map((f) => (
             <label key={f.key} className="flex flex-col gap-1">
-              <span className="text-muted" style={{ fontSize: 11.5 }}>{f.label}{f.optional ? " (необязательно)" : ""}</span>
+              <span className="text-muted" style={{ fontSize: 11.5 }}>{f.label}{f.optional ? " (optional)" : ""}</span>
               <input
                 type={f.secret ? "password" : "text"}
                 value={fields[f.key] ?? ""}
                 onChange={(e) => setFields((x) => ({ ...x, [f.key]: e.target.value }))}
-                placeholder={f.secret && account?.secretsSet[f.key] ? "•••••••• (сохранён, оставьте пустым)" : (f.placeholder ?? "")}
+                placeholder={f.secret && account?.secretsSet[f.key] ? "•••••••• (saved, leave empty to keep)" : (f.placeholder ?? "")}
                 className="border border-line bg-surface rounded-lg mono" style={inp}
               />
             </label>
           ))}
           {err && <div style={{ fontSize: 12.5, color: "var(--neg)" }}>{err}</div>}
-          <p className="text-muted" style={{ fontSize: 11 }}>Секреты хранятся на сервере (data/), в браузер не отдаются. После сохранения – «Проверить», затем «Включён».</p>
+          <p className="text-muted" style={{ fontSize: 11 }}>Secrets are stored on the server (data/) and never sent to the browser. After saving, click “Test”, then “Enabled”.</p>
         </div>
         <div className="flex items-center justify-end gap-2 border-t border-line" style={{ padding: "14px 18px" }}>
-          <button onClick={onClose} className="border border-line hover:border-line-2" style={{ borderRadius: 8, padding: "8px 14px", fontSize: 13 }}>Отмена</button>
+          <button onClick={onClose} className="border border-line hover:border-line-2" style={{ borderRadius: 8, padding: "8px 14px", fontSize: 13 }}>Cancel</button>
           <button onClick={save} disabled={busy} className="inline-flex items-center gap-1.5 disabled:opacity-50 text-[color:var(--accent-ink)]" style={{ background: "var(--accent)", borderRadius: 8, padding: "8px 16px", fontSize: 13, fontWeight: 500 }}>
-            {busy && <Loader2 size={14} className="animate-spin" />} Сохранить
+            {busy && <Loader2 size={14} className="animate-spin" />} Save
           </button>
         </div>
       </div>

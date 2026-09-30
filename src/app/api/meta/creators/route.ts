@@ -3,8 +3,8 @@ import { ORDER_CHANNELS, USER_CHANNELS } from "@/lib/demo/dims";
 
 export const dynamic = "force-dynamic";
 
-// Списки каналов для выпадашек. В продакшене это DISTINCT по таблицам заказов и
-// пользователей в хранилище, в демо справочник синтетического магазина.
+// Channel lists for dropdowns. In production it is a DISTINCT over the order and user
+// tables in the warehouse; in the demo it is the synthetic store's reference data.
 export async function GET() {
   return NextResponse.json({
     configured: true,

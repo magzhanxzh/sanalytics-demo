@@ -15,11 +15,11 @@ import type { DailyPoint } from "@/lib/queries/cards";
 
 type Serie = { key: string; label: string; color: string; width: number; area?: boolean };
 const SERIES: Serie[] = [
-  { key: "revenue", label: "Выручка", color: "var(--c1)", width: 2, area: true },
-  { key: "orders", label: "Заказы", color: "var(--c4)", width: 1.5 },
-  { key: "buyers", label: "Покупатели", color: "var(--c5)", width: 1.5 },
-  { key: "registrations", label: "Регистрации", color: "var(--c2)", width: 1.5 },
-  { key: "weight", label: "Вес", color: "var(--c3)", width: 1.5 },
+  { key: "revenue", label: "Revenue", color: "var(--c1)", width: 2, area: true },
+  { key: "orders", label: "Orders", color: "var(--c4)", width: 1.5 },
+  { key: "buyers", label: "Buyers", color: "var(--c5)", width: 1.5 },
+  { key: "registrations", label: "Sign-ups", color: "var(--c2)", width: 1.5 },
+  { key: "weight", label: "Weight", color: "var(--c3)", width: 1.5 },
 ];
 
 const compact = (v: number) =>
@@ -50,7 +50,7 @@ export function MarketingChart({
           <YAxis tickLine={false} axisLine={false} width={44} tick={{ fontSize: 10.5, fill: "var(--muted)", fontFamily: "var(--font-mono)" }} tickFormatter={compact} />
           <Tooltip
             contentStyle={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 8, fontSize: 12 }}
-            formatter={(value) => Number(value).toLocaleString("ru-RU")}
+            formatter={(value) => Number(value).toLocaleString("en-US")}
           />
           {SERIES.map((s) =>
             s.area ? (
@@ -83,7 +83,7 @@ export function MarketingChart({
         </ComposedChart>
       </ResponsiveContainer>
 
-      {/* Легенда-тоггл */}
+      {/* Toggle legend */}
       <div className="flex flex-wrap gap-3.5 border-t border-line" style={{ paddingTop: 12, marginTop: 4 }}>
         {SERIES.map((s) => (
           <button

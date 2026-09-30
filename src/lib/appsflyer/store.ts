@@ -3,8 +3,8 @@ import { emptyAfConfig, type AfConfig, type AfSync } from "./types";
 import { memStore } from "@/lib/demo/memstore";
 import { demoAfAggregate } from "@/lib/demo/ads";
 
-// Конфиг AppsFlyer (токен + приложения) и последняя выгрузка. Токен в браузер не отдаётся.
-// В продакшене хранится в файле на сервере; в демо это память процесса с демо-приложениями.
+// AppsFlyer config (token + apps) and the last export. The token is never sent to the browser.
+// In production it is stored in a file on the server; in the demo it is process memory with demo apps.
 
 const config = memStore<AfConfig>("af_config", () => ({
   token: "demo",

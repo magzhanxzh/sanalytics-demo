@@ -6,8 +6,8 @@ import { COUNTRIES, FALLBACK_CREATORS, FALLBACK_USER_CREATORS, type CardFilters 
 import { DateRangePicker } from "@/components/DateRangePicker";
 import { useAccess, countryOptions } from "@/lib/auth/useAccess";
 
-// Панель фильтров в виде чипов (дизайн-хендофф). Применяется на изменение.
-// basePath задаёт маршрут, куда едут параметры (по умолчанию /marketing).
+// Filter bar as chips (design handoff). Applies on change.
+// basePath sets the route the parameters go to (defaults to /marketing).
 export function FilterChips({ filters, basePath = "/marketing" }: { filters: CardFilters; basePath?: string }) {
   const router = useRouter();
   const [, startTransition] = useTransition();
@@ -18,7 +18,7 @@ export function FilterChips({ filters, basePath = "/marketing" }: { filters: Car
 
   useEffect(() => setF(filters), [filters]);
 
-  // Ограниченному пользователю: если выбранная страна вне доступа – переключаем на разрешённую.
+  // Restricted user: if the selected country is outside their access, switch to an allowed one.
   useEffect(() => {
     if (access.loading || access.allowed === null || access.allowed.length === 0) return;
     if (!access.allowed.includes(filters.country)) {
@@ -60,53 +60,53 @@ export function FilterChips({ filters, basePath = "/marketing" }: { filters: Car
   return (
     <div className="flex flex-wrap items-center gap-2">
       <ChipSelect
-        label="Страна"
+        label="Country"
         value={countryLabel}
         selectValue={f.country}
         options={countryOptions(access.allowed).map(([value, label]) => ({ value, label }))}
         onChange={(v) => { const n = { ...f, country: v }; setF(n); apply(n); }}
       />
       <ChipSelect
-        label="Канал клиента"
-        value={f.userCreator === "all" ? "Все" : f.userCreator}
+        label="User channel"
+        value={f.userCreator === "all" ? "All" : f.userCreator}
         selectValue={f.userCreator}
-        options={[{ value: "all", label: "Все" }, ...userCreators.map((c) => ({ value: c, label: c }))]}
+        options={[{ value: "all", label: "All" }, ...userCreators.map((c) => ({ value: c, label: c }))]}
         onChange={(v) => { const n = { ...f, userCreator: v }; setF(n); apply(n); }}
       />
       <ChipSelect
-        label="Канал заказа"
-        value={f.orderCreator === "all" ? "Все" : f.orderCreator}
+        label="Order channel"
+        value={f.orderCreator === "all" ? "All" : f.orderCreator}
         selectValue={f.orderCreator}
-        options={[{ value: "all", label: "Все" }, ...orderCreators.map((c) => ({ value: c, label: c }))]}
+        options={[{ value: "all", label: "All" }, ...orderCreators.map((c) => ({ value: c, label: c }))]}
         onChange={(v) => { const n = { ...f, orderCreator: v }; setF(n); apply(n); }}
       />
       <ChipSelect
-        label="Выручка"
-        value={f.basis === "paid" ? "Оплачено" : "Валовая"}
+        label="Revenue"
+        value={f.basis === "paid" ? "Paid" : "Gross"}
         selectValue={f.basis}
-        options={[{ value: "gross", label: "Валовая" }, { value: "paid", label: "Оплачено" }]}
+        options={[{ value: "gross", label: "Gross" }, { value: "paid", label: "Paid" }]}
         onChange={(v) => { const n = { ...f, basis: v as CardFilters["basis"] }; setF(n); apply(n); }}
       />
       <ChipSelect
         label="B2B"
-        value={f.excludeB2b ? "Искл" : "Вкл"}
+        value={f.excludeB2b ? "Excl" : "Incl"}
         selectValue={f.excludeB2b ? "exclude" : "include"}
-        options={[{ value: "include", label: "Вкл" }, { value: "exclude", label: "Искл" }]}
+        options={[{ value: "include", label: "Incl" }, { value: "exclude", label: "Excl" }]}
         onChange={(v) => { const n = { ...f, excludeB2b: v === "exclude" }; setF(n); apply(n); }}
       />
 
-      {/* Правая часть: оба периода + обновить */}
+      {/* Right side: both periods + refresh */}
       <div className="ml-auto flex flex-wrap items-center gap-3">
         <DateRangePicker
-          label="Период регистрации"
-          placeholder="не задан"
+          label="Sign-up period"
+          placeholder="not set"
           from={f.regFrom}
           to={f.regTo}
           onApply={(from, to) => { const n = { ...f, regFrom: from, regTo: to }; setF(n); apply(n); }}
           onClear={() => { const n = { ...f, regFrom: "", regTo: "" }; setF(n); apply(n); }}
         />
         <DateRangePicker
-          label="Период заказа"
+          label="Order period"
           from={f.from}
           to={f.to}
           onApply={(from, to) => { const n = { ...f, from, to }; setF(n); apply(n); }}

@@ -1,5 +1,5 @@
-// Детерминированный генератор псевдослучайных чисел (mulberry32) и хелперы
-// распределений. Один и тот же seed всегда даёт одни и те же данные.
+// Deterministic pseudo-random number generator (mulberry32) and distribution
+// helpers. The same seed always produces the same data.
 
 export type Rng = () => number;
 
@@ -14,7 +14,7 @@ export function mulberry32(seed: number): Rng {
   };
 }
 
-// Смешать два числа в новый seed (чтобы у каждого дня/пользователя был свой поток).
+// Mix two numbers into a new seed (so each day or user gets its own stream).
 export function hashSeed(a: number, b: number): number {
   let h = Math.imul(a ^ 0x9e3779b9, 0x85ebca6b) ^ Math.imul(b + 0x632be5ab, 0xc2b2ae35);
   h ^= h >>> 16;
@@ -37,7 +37,7 @@ export function exponential(rng: Rng, mean: number): number {
   return -Math.log(Math.max(1 - rng(), 1e-12)) * mean;
 }
 
-// Выбор индекса по весам.
+// Pick an index by weights.
 export function pick(rng: Rng, weights: readonly number[]): number {
   let total = 0;
   for (const w of weights) total += w;

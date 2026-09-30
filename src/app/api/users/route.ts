@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic";
 
 export async function GET() {
   const me = await getCurrentProfile();
-  // Список всех профилей (email/роли коллег) отдаём только владельцу; остальным – только «me».
+  // The full profile list (colleague emails and roles) goes only to the owner; others get only "me".
   if (me?.role !== "owner") return NextResponse.json({ users: [], me });
   return NextResponse.json({ users: listUsers(), me });
 }

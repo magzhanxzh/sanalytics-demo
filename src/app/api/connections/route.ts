@@ -3,12 +3,12 @@ import { getConnectionView, getClickHouseStatus, getPgBridgeStatus } from "@/lib
 
 export const dynamic = "force-dynamic";
 
-const DEMO_MSG = "Демо-режим: данные синтетические, подключение к базе отключено.";
+const DEMO_MSG = "Demo mode: data is synthetic, the database connection is disabled.";
 
-// Текущее подключение (без пароля) + статус источников.
+// Current connection (without password) + source status.
 export async function GET() {
   const [view, ch, pg] = await Promise.all([getConnectionView(), getClickHouseStatus(), getPgBridgeStatus()]);
-  // canManage=false: в демо подключение к базе не настраивается.
+  // canManage=false: the database connection is not configurable in the demo.
   return NextResponse.json({ connection: view, status: { ch, pg }, canManage: false, demo: true });
 }
 

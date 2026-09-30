@@ -39,9 +39,9 @@ export function MarketingActions({ filters }: { filters: CardFilters }) {
         onClick={exportXlsx}
         className="flex items-center gap-2 border border-line bg-surface text-ink-2 hover:border-line-2 hover:text-ink transition-colors"
         style={{ borderRadius: 8, padding: "8px 12px", fontSize: 12.5 }}
-        title="Скачать текущий срез в Excel"
+        title="Download the current slice as Excel"
       >
-        <Download size={15} /> Экспорт
+        <Download size={15} /> Export
       </button>
       <button
         onClick={refresh}
@@ -49,7 +49,7 @@ export function MarketingActions({ filters }: { filters: CardFilters }) {
         className="flex items-center gap-2 text-[color:var(--accent-ink)] disabled:opacity-60"
         style={{ background: "var(--accent)", borderRadius: 8, padding: "8px 14px", fontSize: 12.5, fontWeight: 500 }}
       >
-        <RefreshCw size={15} className={pending ? "animate-spin" : ""} /> Обновить
+        <RefreshCw size={15} className={pending ? "animate-spin" : ""} /> Refresh
       </button>
     </>
   );

@@ -4,7 +4,7 @@ import { parseFilters } from "@/lib/queries/cards";
 
 export const dynamic = "force-dynamic";
 
-// Принудительный пересчёт среза (сброс кеша). Используется кнопкой «Обновить».
+// Force a slice recompute (cache reset). Used by the Refresh button.
 export async function POST(request: Request) {
   const { searchParams } = new URL(request.url);
   const filters = parseFilters(Object.fromEntries(searchParams.entries()));

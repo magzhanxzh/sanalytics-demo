@@ -8,8 +8,8 @@ export function getLastWarmAt(): number {
   return lastWarmAt;
 }
 
-// Прогреваем дефолтный срез (KZ, последние 7 дней) - самый частый и самый тяжёлый.
-// Считаем со сравнением периодов и кладём в кеш, чтобы заход был мгновенным.
+// Warm the default slice (KZ, last 7 days), the most frequent and heaviest one.
+// Compute it with period comparison and cache it so the first visit is instant.
 export async function warm(): Promise<void> {
   if (running) return;
   running = true;
@@ -21,7 +21,7 @@ export async function warm(): Promise<void> {
     ]);
     lastWarmAt = Date.now();
   } catch {
-    // ошибки уже залогированы в getCards/getDaily
+    // errors are already logged in getCards/getDaily
   } finally {
     running = false;
   }

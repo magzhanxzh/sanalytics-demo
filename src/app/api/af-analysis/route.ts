@@ -11,7 +11,7 @@ export async function GET(req: Request) {
   url.searchParams.forEach((v, k) => { sp[k] = v; });
   const filters = parseFilters(sp);
   filters.country = await enforceCountry(filters.country);
-  // Пересборку карты AF (тратит квоту) разрешаем только владельцу/админу.
+  // Rebuilding the AF map (uses quota) is allowed only for the owner or an admin.
   const rebuildMap = sp.rebuildMap === "1" && (await canManageConnections());
   const syncSpend = sp.sync === "1";
   const bypassCache = sp.force === "1" || syncSpend || rebuildMap;

@@ -6,11 +6,11 @@ import { enforceCountry } from "@/lib/auth/access";
 
 export const dynamic = "force-dynamic";
 
-// Экспорт текущего среза в .xlsx: лист «Сводка» (KPI) + лист «Динамика» (по периодам).
+// Export the current slice to .xlsx: a Summary sheet (KPIs) + a Trend sheet (by period).
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const filters = parseFilters(Object.fromEntries(searchParams.entries()));
-  filters.country = await enforceCountry(filters.country); // гео-ограничение как в остальных срезах
+  filters.country = await enforceCountry(filters.country); // geo restriction as in the other slices
 
   const [cards, daily] = await Promise.all([getCards(filters), getDaily(filters)]);
 
@@ -18,29 +18,29 @@ export async function GET(request: Request) {
   wb.creator = "Sanalytics";
   wb.created = new Date();
 
-  // Лист «Сводка»
-  const s1 = wb.addWorksheet("Сводка");
+  // Summary sheet
+  const s1 = wb.addWorksheet("Summary");
   s1.columns = [
-    { header: "Показатель", key: "k", width: 22 },
-    { header: "Значение", key: "v", width: 20 },
+    { header: "Metric", key: "k", width: 22 },
+    { header: "Value", key: "v", width: 20 },
   ];
-  s1.addRow({ k: "Срез", v: describeFilters(filters) });
-  s1.addRow({ k: "Страна", v: COUNTRIES.find((c) => c.code === filters.country)?.label ?? filters.country });
-  s1.addRow({ k: "Период заказа", v: formatRange(filters.from, filters.to) });
-  if (filters.regFrom && filters.regTo) s1.addRow({ k: "Период регистрации", v: formatRange(filters.regFrom, filters.regTo) });
+  s1.addRow({ k: "Slice", v: describeFilters(filters) });
+  s1.addRow({ k: "Country", v: COUNTRIES.find((c) => c.code === filters.country)?.label ?? filters.country });
+  s1.addRow({ k: "Order period", v: formatRange(filters.from, filters.to) });
+  if (filters.regFrom && filters.regTo) s1.addRow({ k: "Sign-up period", v: formatRange(filters.regFrom, filters.regTo) });
   s1.addRow({});
   for (const c of cards.cards) s1.addRow({ k: c.title, v: c.value });
   s1.getRow(1).font = { bold: true };
 
-  // Лист «Динамика»
-  const s2 = wb.addWorksheet("Динамика");
+  // Trend sheet
+  const s2 = wb.addWorksheet("Trend");
   s2.columns = [
-    { header: "Период", key: "date", width: 12 },
-    { header: "Выручка", key: "revenue", width: 14 },
-    { header: "Заказы", key: "orders", width: 12 },
-    { header: "Покупатели", key: "buyers", width: 14 },
-    { header: "Регистрации", key: "registrations", width: 14 },
-    { header: "Вес, кг", key: "weight", width: 12 },
+    { header: "Period", key: "date", width: 12 },
+    { header: "Revenue", key: "revenue", width: 14 },
+    { header: "Orders", key: "orders", width: 12 },
+    { header: "Buyers", key: "buyers", width: 14 },
+    { header: "Sign-ups", key: "registrations", width: 14 },
+    { header: "Weight, kg", key: "weight", width: 12 },
   ];
   for (const p of daily.points) {
     s2.addRow({ date: p.date, revenue: p.revenue, orders: p.orders, buyers: p.buyers, registrations: p.registrations, weight: p.weight });

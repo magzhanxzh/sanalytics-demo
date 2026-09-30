@@ -8,10 +8,10 @@ export const maxDuration = 120;
 
 export async function POST(request: Request) {
   const body = (await request.json().catch(() => ({}))) as { widget?: Widget };
-  if (!body.widget || !body.widget.filters) return NextResponse.json({ kind: "error", message: "Нет виджета" }, { status: 400 });
-  // гео-ограничение: страна виджета зажимается по правам пользователя
+  if (!body.widget || !body.widget.filters) return NextResponse.json({ kind: "error", message: "No widget" }, { status: 400 });
+  // geo restriction: the widget country is clamped to the user's permissions
   body.widget.filters.country = await enforceCountry(body.widget.filters.country);
-  // разбивки «по странам» не фильтруются country в SQL – зажимаем результат по правам
+  // "by country" breakdowns are not filtered by country in SQL, so the result is clamped to permissions
   const allowed = await allowedCountries();
   const data = await resolveWidget(body.widget, allowed);
   return NextResponse.json(data);

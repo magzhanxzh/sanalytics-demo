@@ -3,9 +3,9 @@ import { memStore } from "@/lib/demo/memstore";
 import { CURRENT_USER } from "@/lib/dashboards/types";
 import type { Role, UserProfile } from "./roles";
 
-// Роли и гео-доступ (RBAC). В продакшене профиль берётся из Supabase (profiles.role +
-// profiles.countries, RLS), здесь та же модель, но пользователи демо лежат в памяти, а
-// текущий пользователь всегда владелец (авторизация в демо выключена).
+// Roles and geo access (RBAC). In production the profile comes from Supabase (profiles.role +
+// profiles.countries, RLS); here it is the same model, but demo users live in memory and
+// the current user is always the owner (auth is disabled in the demo).
 
 const users = memStore<UserProfile[]>("users", () => [
   { id: "usr_owner", email: CURRENT_USER, role: "owner", countries: [], created_at: "2025-01-10T09:00:00Z" },
@@ -25,29 +25,29 @@ export function updateUser(id: string, role: Role, countries: string[]): boolean
   return true;
 }
 
-// Профиль текущего пользователя (роль + разрешённые страны).
+// Current user profile (role + allowed countries).
 export async function getCurrentProfile(): Promise<UserProfile | null> {
   return users.get().find((u) => u.email === CURRENT_USER) ?? null;
 }
 
-// Гео-ограничение: возвращает страну, которую пользователю разрешено смотреть.
-// owner/admin – любую. marketer/viewer – только из своего списка; иначе '__none__' (нет данных).
+// Geo restriction: returns the country the user is allowed to see.
+// owner/admin: any. marketer/viewer: only from their list; otherwise '__none__' (no data).
 export async function enforceCountry(requested: string): Promise<string> {
   const p = await getCurrentProfile();
-  if (!p) return requested; // нет сессии (например прогрев кеша) – без ограничений
+  if (!p) return requested; // no session (e.g. cache warm-up), no restriction
   if (p.role === "owner" || p.role === "admin") return requested;
   const allowed = p.countries ?? [];
-  if (allowed.length === 0) return "__none__"; // доступ ещё не выдан
+  if (allowed.length === 0) return "__none__"; // access not granted yet
   if (requested !== "all" && allowed.includes(requested)) return requested;
-  return allowed[0]; // ограничиваем первым разрешённым
+  return allowed[0]; // clamp to the first allowed one
 }
 
 export async function isOwner(): Promise<boolean> {
   return (await getCurrentProfile())?.role === "owner";
 }
 
-// Список разрешённых стран пользователя для разбивок «по странам».
-// null – без ограничений (owner/admin или нет сессии/прогрев); [] – доступа нет.
+// The user's allowed countries for "by country" breakdowns.
+// null means no restriction (owner/admin or no session/warm-up); [] means no access.
 export async function allowedCountries(): Promise<string[] | null> {
   const p = await getCurrentProfile();
   if (!p) return null;
@@ -59,7 +59,7 @@ export function roleOf(p: UserProfile | null): Role {
   return p?.role ?? "pending";
 }
 
-// Кто может менять подключения к источникам данных: владелец или админ.
+// Who can change data source connections: the owner or an admin.
 export async function canManageConnections(): Promise<boolean> {
   const p = await getCurrentProfile();
   return p?.role === "owner" || p?.role === "admin";

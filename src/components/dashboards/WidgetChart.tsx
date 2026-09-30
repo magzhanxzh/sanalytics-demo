@@ -10,7 +10,7 @@ const PALETTE = ["var(--c1)", "var(--c2)", "var(--c3)", "var(--c4)", "var(--c5)"
 const compact = (v: number) => (Math.abs(v) >= 1000 ? (v / 1000).toFixed(0) + "k" : String(Math.round(v)));
 
 export function WidgetChart({ widget, data }: { widget: Widget; data: WidgetData }) {
-  if (data.kind === "loading") return <div className="text-muted" style={{ fontSize: 12, padding: 8 }}>Загрузка…</div>;
+  if (data.kind === "loading") return <div className="text-muted" style={{ fontSize: 12, padding: 8 }}>Loading…</div>;
   if (data.kind === "error") return <div className="text-neg" style={{ fontSize: 12, padding: 8 }}>{data.message}</div>;
 
   if (data.kind === "value") {
@@ -37,7 +37,7 @@ export function WidgetChart({ widget, data }: { widget: Widget; data: WidgetData
               <tr key={ri} className="border-t border-line">
                 {row.map((cell, ci) => (
                   <td key={ci} className={ci === 0 ? "" : "text-right mono"} style={{ padding: "7px 8px", fontSize: 12.5 }}>
-                    {typeof cell === "number" ? cell.toLocaleString("ru-RU") : cell}
+                    {typeof cell === "number" ? cell.toLocaleString("en-US") : cell}
                   </td>
                 ))}
               </tr>

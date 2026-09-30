@@ -7,16 +7,16 @@ import { METRIC_LABELS, OP_LABELS, formatMetricValue, type AlertRule } from "./t
 import { COUNTRIES } from "@/lib/queries/cards";
 import { memStore } from "@/lib/demo/memstore";
 
-// Доставка алертов: считаем правила, и по сработавшим шлём уведомление в Telegram.
-// Чтобы не спамить: шлём на ФРОНТЕ срабатывания (was ok -> fired) и повторно не чаще
-// COOLDOWN, пока правило продолжает срабатывать. Когда правило перестаёт срабатывать –
-// состояние сбрасывается, и следующее срабатывание снова уведомит.
+// Alert delivery: evaluate the rules and send a Telegram notification for the fired ones.
+// To avoid spam: send on the rising EDGE (was ok -> fired) and repeat no more often than
+// COOLDOWN while the rule keeps firing. When the rule stops firing
+// the state resets, and the next firing notifies again.
 
-const COOLDOWN_MS = 6 * 3600 * 1000; // повторное напоминание не чаще раза в 6 часов
+const COOLDOWN_MS = 6 * 3600 * 1000; // repeat reminder at most once every 6 hours
 
 type State = Record<string, { firing: boolean; lastNotifiedAt: number }>;
 
-// Состояние антиспама (в продакшене файл на сервере, в демо память процесса).
+// Anti-spam state (a file on the server in production, process memory in the demo).
 const stateStore = memStore<State>("alerts_state", () => ({}));
 async function readState(): Promise<State> {
   return { ...stateStore.get() };
@@ -31,9 +31,9 @@ function messageFor(rule: AlertRule, value: number): string {
   const m = METRIC_LABELS[rule.metric];
   return [
     `🔴 <b>${rule.name}</b>`,
-    `${m} за ${rule.windowDays} дн.: <b>${formatMetricValue(rule.metric, value)}</b>`,
-    `условие: ${m} ${OP_LABELS[rule.operator]} ${formatMetricValue(rule.metric, rule.threshold)}`,
-    `страна: ${countryLabel(rule.country)}`,
+    `${m} over ${rule.windowDays} d: <b>${formatMetricValue(rule.metric, value)}</b>`,
+    `condition: ${m} ${OP_LABELS[rule.operator]} ${formatMetricValue(rule.metric, rule.threshold)}`,
+    `country: ${countryLabel(rule.country)}`,
   ].join("\n");
 }
 
@@ -60,17 +60,17 @@ export async function runAlerts(): Promise<AlertRun> {
 
     if (!st.fired) { state[rule.id] = { firing: false, lastNotifiedAt: prev.lastNotifiedAt }; continue; }
 
-    // сработало: уведомляем на фронте срабатывания или по прошествии COOLDOWN
+    // fired: notify on the rising edge or after COOLDOWN
     const shouldNotify = !prev.firing || now - prev.lastNotifiedAt > COOLDOWN_MS;
     if (!shouldNotify) { state[rule.id] = { firing: true, lastNotifiedAt: prev.lastNotifiedAt }; continue; }
 
     if (rule.channel === "email") {
-      skipped.push(`${rule.name}: доставка по почте пока не реализована`);
+      skipped.push(`${rule.name}: email delivery is not implemented yet`);
       state[rule.id] = { firing: true, lastNotifiedAt: prev.lastNotifiedAt };
       continue;
     }
     if (!tgReady) {
-      skipped.push(`${rule.name}: Telegram не настроен (Интеграции)`);
+      skipped.push(`${rule.name}: Telegram is not configured (Integrations)`);
       state[rule.id] = { firing: true, lastNotifiedAt: prev.lastNotifiedAt };
       continue;
     }
@@ -79,7 +79,7 @@ export async function runAlerts(): Promise<AlertRun> {
     else { skipped.push(`${rule.name}: ${res.error}`); state[rule.id] = { firing: true, lastNotifiedAt: prev.lastNotifiedAt }; }
   }
 
-  // убираем из состояния удалённые правила
+  // drop deleted rules from the state
   const ids = new Set(rules.map((r) => r.id));
   for (const k of Object.keys(state)) if (!ids.has(k)) delete state[k];
   await writeState(state);

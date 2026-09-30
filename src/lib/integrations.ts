@@ -4,20 +4,20 @@ import { storeStats } from "@/lib/demo/warehouse";
 
 export type SourceStatus = { configured: boolean; ok: boolean; detail?: string };
 
-// Статус источников данных для экрана Интеграций.
-// В продакшене: живой ping ClickHouse (SELECT version()) и проверка моста в PostgreSQL.
-// В демо оба источника заменяет синтетическое хранилище в памяти процесса.
+// Data source status for the Integrations screen.
+// In production: a live ClickHouse ping (SELECT version()) and a PostgreSQL bridge check.
+// In the demo both sources are replaced by the synthetic in-memory store.
 export async function getClickHouseStatus(): Promise<SourceStatus> {
   const s = storeStats();
-  return { configured: true, ok: true, detail: `демо: ${s.orders.toLocaleString("ru-RU")} заказов` };
+  return { configured: true, ok: true, detail: `demo: ${s.orders.toLocaleString("en-US")} orders` };
 }
 
 export async function getPgBridgeStatus(): Promise<SourceStatus> {
   const s = storeStats();
-  return { configured: true, ok: true, detail: `демо: ${s.users.toLocaleString("ru-RU")} пользователей` };
+  return { configured: true, ok: true, detail: `demo: ${s.users.toLocaleString("en-US")} users` };
 }
 
-// Активное подключение для UI (без пароля).
+// Active connection for the UI (without password).
 export async function getConnectionView(): Promise<ChConnectionView> {
   return { source: "none", url: "demo://in-memory", username: "demo", database: "sanalytics_demo", hasPassword: false };
 }

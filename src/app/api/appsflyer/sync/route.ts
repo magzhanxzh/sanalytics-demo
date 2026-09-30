@@ -9,10 +9,10 @@ export const dynamic = "force-dynamic";
 
 function fmt(d: Date) { return d.toISOString().slice(0, 10); }
 
-// Синхронизация AF за окно. По умолчанию – последние 30 дней.
+// AF sync for a window. Defaults to the last 30 days.
 export async function POST(req: Request) {
   if (!(await canManageConnections())) {
-    return NextResponse.json({ ok: false, error: "Недостаточно прав." }, { status: 403 });
+    return NextResponse.json({ ok: false, error: "Not allowed." }, { status: 403 });
   }
   const body = (await req.json().catch(() => ({}))) as { from?: string; to?: string };
   const to = body.to || fmt(new Date());
@@ -20,10 +20,10 @@ export async function POST(req: Request) {
 
   const cfg = await getAfConfig();
   if (!cfg.token || cfg.apps.filter((a) => a.id).length === 0) {
-    return NextResponse.json({ ok: false, error: "Сначала задайте токен и хотя бы один App ID." }, { status: 400 });
+    return NextResponse.json({ ok: false, error: "Set the token and at least one App ID first." }, { status: 400 });
   }
 
-  // Демо: агрегат из синтетических данных, Pull API не вызывается.
+  // Demo: an aggregate from synthetic data, the Pull API is not called.
   if (!liveConnectors()) {
     const sync = demoAfAggregate(from, to);
     await saveLastSync(sync);

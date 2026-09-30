@@ -2,8 +2,8 @@ import "server-only";
 import { defaultSettings, type Settings } from "./types";
 import { memStore } from "@/lib/demo/memstore";
 
-// Настройки организации. В продакшене: Supabase (per-user), без Supabase: файл на сервере.
-// В демо: память процесса.
+// Organization settings. In production: Supabase (per user), without Supabase: a file on the server.
+// In the demo: process memory.
 const settings = memStore<Settings>("settings", defaultSettings);
 
 export async function getSettings(): Promise<Settings> {

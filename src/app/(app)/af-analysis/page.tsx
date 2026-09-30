@@ -27,16 +27,16 @@ export default async function AfAnalysisPage({
 }) {
   const sp = await searchParams;
   const filters = parseFilters(sp);
-  // На AF-анализе оба периода по умолчанию «не заданы» (в отличие от Маркетинга,
-  // где период заказа = последние 30 дней). Если параметра нет в URL – оставляем пусто.
+  // On Attribution both periods are "not set" by default (unlike Marketing, where the
+  // order period is the last 30 days). If the URL has no parameter, leave it empty.
   if (sp.from === undefined) filters.from = "";
   if (sp.to === undefined) filters.to = "";
-  // Выручка по умолчанию из Настроек (если в URL не выбрана).
+  // Revenue basis defaults to Settings (unless chosen in the URL).
   if (sp.basis === undefined) filters.basis = (await getSettings()).revenueBasis;
 
   return (
     <>
-      <AppHeader title="AF анализ" subtitle="Таргет и органика по данным AppsFlyer">
+      <AppHeader title="Attribution" subtitle="Paid vs organic from AppsFlyer data">
         <FilterChips filters={filters} basePath="/af-analysis" />
       </AppHeader>
 

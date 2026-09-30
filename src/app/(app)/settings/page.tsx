@@ -10,7 +10,7 @@ export default async function Page() {
   const [settings, owner] = await Promise.all([getSettings(), isOwner()]);
   return (
     <>
-      <AppHeader title="Настройки" subtitle="Организация, доступы, модель данных и ИИ" />
+      <AppHeader title="Settings" subtitle="Organization, access, data model and AI" />
       <div style={{ padding: "22px 28px 60px" }}>
         <div className="mx-auto flex flex-col" style={{ maxWidth: 840, gap: 18 }}>
           {owner && <UsersManager />}

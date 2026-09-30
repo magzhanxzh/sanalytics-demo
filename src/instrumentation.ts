@@ -1,24 +1,24 @@
-// Запускается один раз при старте сервера Next.js.
-// Поднимает фоновый прогрев кеша и проверку алертов по расписанию.
+// Runs once when the Next.js server starts.
+// Starts background cache warm-up and scheduled alert checks.
 
 export async function register() {
   if (process.env.NEXT_RUNTIME !== "nodejs") return;
 
   const { warm } = await import("@/lib/warm");
-  // Карта MMP (user_id -> канал) строится раз в сутки; экран AF-анализа отвечает из неё.
+  // The MMP map (user_id -> channel) is built once a day; the Attribution screen answers from it.
   const { maybeRefreshDailyAfMap } = await import("@/lib/appsflyer/regmap");
-  // Доставка алертов: оцениваем правила и шлём сработавшие в Telegram (с антиспамом).
+  // Alert delivery: evaluate rules and send the fired ones to Telegram (with anti-spam).
   const { runAlerts } = await import("@/lib/alerts/deliver");
 
-  const INTERVAL_MS = 15 * 60 * 1000; // каждые 15 минут
-  const ALERTS_MS = 30 * 60 * 1000;   // алерты раз в 30 минут
+  const INTERVAL_MS = 15 * 60 * 1000; // every 15 minutes
+  const ALERTS_MS = 30 * 60 * 1000;   // alerts every 30 minutes
 
-  // первый прогрев через 5 секунд после старта (даём серверу подняться)
+  // first warm-up 5 seconds after start (let the server come up)
   setTimeout(() => {
     void warm();
     void maybeRefreshDailyAfMap();
   }, 5_000);
-  // первую проверку алертов – через минуту, когда кеш метрик уже тёплый
+  // first alert check after a minute, when the metrics cache is already warm
   setTimeout(() => { void runAlerts(); }, 60_000);
 
   setInterval(() => {

@@ -2,13 +2,13 @@ import "server-only";
 import type { AlertRule } from "./types";
 import { memStore } from "@/lib/demo/memstore";
 
-// Правила алертов. В продакшене: Supabase (per-user, RLS), без Supabase: файл на сервере.
-// В демо: память процесса с несколькими готовыми правилами.
+// Alert rules. In production: Supabase (per user, RLS), without Supabase: a file on the server.
+// In the demo: process memory with a few ready-made rules.
 const alerts = memStore<AlertRule[]>("alerts", () => [
-  { id: "alr_demo1", name: "Выручка KZ за сутки просела", metric: "revenue", operator: "lt", threshold: 2500, windowDays: 1, country: "KZ", channel: "telegram", enabled: true },
-  { id: "alr_demo2", name: "Мало регистраций в KZ", metric: "registrations", operator: "lt", threshold: 60, windowDays: 1, country: "KZ", channel: "telegram", enabled: true },
-  { id: "alr_demo3", name: "Средний чек вырос", metric: "avg_check", operator: "gt", threshold: 32, windowDays: 7, country: "all", channel: "email", enabled: true },
-  { id: "alr_demo4", name: "Заказы UZ за неделю", metric: "orders", operator: "lt", threshold: 300, windowDays: 7, country: "UZ", channel: "telegram", enabled: false },
+  { id: "alr_demo1", name: "KZ daily revenue dropped", metric: "revenue", operator: "lt", threshold: 2500, windowDays: 1, country: "KZ", channel: "telegram", enabled: true },
+  { id: "alr_demo2", name: "Few sign-ups in KZ", metric: "registrations", operator: "lt", threshold: 60, windowDays: 1, country: "KZ", channel: "telegram", enabled: true },
+  { id: "alr_demo3", name: "Average check went up", metric: "avg_check", operator: "gt", threshold: 32, windowDays: 7, country: "all", channel: "email", enabled: true },
+  { id: "alr_demo4", name: "UZ weekly orders", metric: "orders", operator: "lt", threshold: 300, windowDays: 7, country: "UZ", channel: "telegram", enabled: false },
 ]);
 
 export async function listAlerts(): Promise<AlertRule[]> {

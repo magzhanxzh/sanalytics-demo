@@ -2,15 +2,15 @@ import "server-only";
 import { afUsers, todayDay, isoOf, AF_TARGET, AF_ORGANIC } from "@/lib/demo/warehouse";
 import { AD_SOURCES } from "@/lib/demo/dims";
 
-// Карта user_id -> канал регистрации (таргет/органика) по данным MMP.
+// Map of user_id -> sign-up channel (paid or organic) from MMP data.
 //
-// В продакшене карта собирается раз в утро из сырых событий регистрации AppsFlyer
-// (raw-data in_app_events_report + organic_in_app_events_report по всем приложениям,
-// окно 90 дней, кусками по 30 дней из-за лимита Pull API). Канал = медиа-источник
-// самого раннего события, платное важнее restricted, restricted важнее органики.
-// Экран AF-анализа отвечает из готовой карты, не дергая API на каждый клик.
+// In production the map is built every morning from raw AppsFlyer sign-up events
+// (raw-data in_app_events_report + organic_in_app_events_report for all apps,
+// a 90-day window in 30-day chunks because of the Pull API limit). Channel = media source
+// of the earliest event; paid beats restricted, restricted beats organic.
+// The Attribution screen answers from the ready map without calling the API on every click.
 //
-// В демо карта строится из синтетического хранилища с той же формой и тем же окном.
+// In the demo the map is built from the synthetic store with the same shape and window.
 
 const WINDOW_DAYS = 90;
 
@@ -23,9 +23,9 @@ export type RegMapMeta = {
   from: string;
   to: string;
   appsSig: string;
-  size: number;       // сколько пользователей в карте
-  truncated: boolean; // упёрлись ли в лимит строк выгрузки
-  errors: string[];   // ошибки по приложениям/эндпоинтам (если были)
+  size: number;       // how many users are in the map
+  truncated: boolean; // whether the export row limit was hit
+  errors: string[];   // errors by app or endpoint (if any)
 };
 
 export type BuiltRegMap = { meta: RegMapMeta; map: RegMap };
@@ -67,7 +67,7 @@ export async function refreshDailyAfMap(): Promise<DailyRefresh> {
   return { status: "ok", meta: g.__sanalyticsAfMap.meta, day: g.__sanalyticsAfMap.day };
 }
 
-// Планировщик: карта одна на сутки.
+// Scheduler: one map per day.
 export async function maybeRefreshDailyAfMap(): Promise<void> {
   await getDailyAfMap();
 }

@@ -19,12 +19,12 @@ function Group({ title, sub, children }: { title: string; sub: string; children:
   );
 }
 
-// Статус настройки: работает сейчас / справочно (не влияет) / скоро.
+// Setting status: active now / reference only (no effect) / coming soon.
 function Tag({ kind }: { kind: "on" | "info" | "soon" }) {
   const map = {
-    on: { t: "работает", bg: "var(--accent-soft)", c: "var(--accent)" },
-    info: { t: "справочно", bg: "var(--sunk)", c: "var(--muted)" },
-    soon: { t: "скоро", bg: "var(--sunk)", c: "var(--muted)" },
+    on: { t: "active", bg: "var(--accent-soft)", c: "var(--accent)" },
+    info: { t: "reference", bg: "var(--sunk)", c: "var(--muted)" },
+    soon: { t: "soon", bg: "var(--sunk)", c: "var(--muted)" },
   }[kind];
   return <span className="mono" style={{ background: map.bg, color: map.c, fontSize: 10, padding: "2px 6px", borderRadius: 99 }}>{map.t}</span>;
 }
@@ -67,58 +67,58 @@ export function SettingsForm({ initial }: { initial: Settings }) {
   return (
     <div className="mx-auto flex flex-col" style={{ maxWidth: 840, gap: 18 }}>
       <div className="text-muted" style={{ fontSize: 12.5, lineHeight: 1.5 }}>
-        Метки: <Tag kind="on" /> – влияет на приложение прямо сейчас; <Tag kind="info" /> – сохраняется, но пока не участвует в расчётах; <Tag kind="soon" /> – появится позже.
+        Labels: <Tag kind="on" /> affects the app right now; <Tag kind="info" /> is saved but not used in calculations yet; <Tag kind="soon" /> is coming later.
       </div>
 
-      <Group title="Организация" sub="Справочные реквизиты">
-        <Row name="Название" tag="info" desc="Название вашей организации. Пока справочно – в расчёты и экспорт не подставляется.">
+      <Group title="Organization" sub="Reference details">
+        <Row name="Name" tag="info" desc="Your organization name. Reference only for now, not used in calculations or export.">
           <input value={s.orgName} onChange={(e) => set("orgName", e.target.value)} className="border border-line bg-surface rounded-[7px]" style={{ padding: "6px 11px", fontSize: 13 }} />
         </Row>
-        <Row name="Часовой пояс" tag="info" desc="В каком поясе группировать дни и недели. Сейчас витрины уже считаются по Алматы (+5); этот выбор пока не переопределяет расчёт.">
+        <Row name="Time zone" tag="info" desc="Time zone used to group days and weeks. Data marts are already computed in Almaty time (UTC+5); this choice does not override that yet.">
           <Sel value={s.timezone} onChange={(v) => set("timezone", v)} options={TIMEZONES} />
         </Row>
-        <Row name="Валюта отчётов" tag="info" desc="Валюта отображения сумм. Сейчас суммы показываются в долларах (как в источнике); конвертация валют пока не делается.">
+        <Row name="Report currency" tag="info" desc="Currency for displayed amounts. Amounts are shown in USD (as in the source); no currency conversion yet.">
           <Sel value={s.currency} onChange={(v) => set("currency", v)} options={CURRENCIES} />
         </Row>
       </Group>
 
-      <Group title="Доступы" sub="Управление людьми и входом">
-        <Row name="Роли и гео-доступ" tag="on" desc="Кто какие страны видит и кто может менять настройки – назначается каждому пользователю в блоке «Пользователи» ниже (только владелец). Это активная система доступа (RBAC).">
-          <span className="text-muted" style={{ fontSize: 12 }}>см. «Пользователи»</span>
+      <Group title="Access" sub="People and sign-in">
+        <Row name="Roles and geo access" tag="on" desc="Which countries each person sees and who can change settings, assigned per user in the Users block below (owner only). This is the active access system (RBAC).">
+          <span className="text-muted" style={{ fontSize: 12 }}>see Users</span>
         </Row>
-        <Row name="SSO (единый вход)" tag="soon" desc="Вход через корпоративный аккаунт (Google Workspace и т.п.). Пока не реализован – вход по email и паролю.">
+        <Row name="SSO" tag="soon" desc="Sign in with a company account (Google Workspace and similar). Not implemented yet, sign-in is by email and password.">
           <button onClick={() => set("sso", !s.sso)} disabled className="mono border rounded-[7px] disabled:opacity-60" style={{ padding: "6px 11px", fontSize: 12.5, borderColor: "var(--line)", background: "transparent", color: "var(--muted)", cursor: "not-allowed" }}>
-            выключено
+            off
           </button>
         </Row>
       </Group>
 
-      <Group title="Модель данных" sub="Как считаются метрики">
-        <Row name="Выручка по умолчанию" tag="on" desc="Что показывать по умолчанию: всю выставленную выручку (валовая) или только оплаченные заказы. Применяется к Маркетингу и AF-анализу, пока вручную не выбран другой вариант в фильтре «Выручка».">
-          <Sel value={s.revenueBasis} onChange={(v) => set("revenueBasis", v as "gross" | "paid")} options={[["gross", "Валовая"], ["paid", "Оплачено"]]} />
+      <Group title="Data model" sub="How metrics are computed">
+        <Row name="Default revenue" tag="on" desc="What to show by default: all billed revenue (gross) or only paid orders. Applies to Marketing and Attribution unless another option is picked in the Revenue filter.">
+          <Sel value={s.revenueBasis} onChange={(v) => set("revenueBasis", v as "gross" | "paid")} options={[["gross", "Gross"], ["paid", "Paid"]]} />
         </Row>
-        <Row name="Модель атрибуции" tag="soon" desc="Как приписывать конверсию рекламным каналам (последний клик, первый клик, линейная и т.д.). Заработает после подключения рекламных кабинетов – в расчёте ROAS/CAC по каналам.">
+        <Row name="Attribution model" tag="soon" desc="How conversions are credited to ad channels (last click, first click, linear and so on). Takes effect in channel ROAS and CAC once ad accounts are connected.">
           <Sel value={s.attribution} onChange={(v) => set("attribution", v)} options={ATTRIBUTIONS} />
         </Row>
-        <Row name="Окно конверсии" tag="soon" desc="Сколько дней после клика/установки засчитывать заказ рекламе. Применится в экономике по каналам после подключения кабинетов. (В AF-анализе окно задаётся периодами регистрации и заказа.)">
+        <Row name="Conversion window" tag="soon" desc="How many days after a click or install an order is credited to ads. Applies to channel economics once ad accounts are connected. (In Attribution the window is set by the sign-up and order periods.)">
           <div className="flex items-center gap-2">
             <input type="number" min={1} max={90} value={s.conversionWindowDays} onChange={(e) => set("conversionWindowDays", Number(e.target.value))} className="mono border border-line bg-surface rounded-[7px]" style={{ padding: "6px 10px", fontSize: 12.5, width: 64 }} />
-            <span className="text-muted" style={{ fontSize: 12.5 }}>дней</span>
+            <span className="text-muted" style={{ fontSize: 12.5 }}>days</span>
           </div>
         </Row>
       </Group>
 
-      <Group title="ИИ-аналитик" sub="Модель Claude для чата на экране «ИИ-аналитик»">
-        <Row name="Модель" tag="on" desc={`Влияет на чат ИИ-аналитика: качество и цену ответов. ${AI_MODELS.find((m) => m.value === s.aiModel)?.hint ?? ""}. Нужен ключ ANTHROPIC_API_KEY.`}>
+      <Group title="AI analyst" sub="Claude model for the AI analyst chat">
+        <Row name="Model" tag="on" desc={`Affects the AI analyst chat: answer quality and cost. ${AI_MODELS.find((m) => m.value === s.aiModel)?.hint ?? ""}. Requires ANTHROPIC_API_KEY.`}>
           <Sel value={s.aiModel} onChange={(v) => set("aiModel", v as AiModel)} options={AI_MODELS.map((m) => [m.value, m.label] as [string, string])} />
         </Row>
       </Group>
 
       <div className="flex items-center gap-3">
         <button onClick={save} disabled={busy} className="text-[color:var(--accent-ink)] disabled:opacity-60" style={{ background: "var(--accent)", borderRadius: 8, padding: "9px 18px", fontSize: 13, fontWeight: 500 }}>
-          Сохранить
+          Save
         </button>
-        {saved && <span className="text-pos flex items-center gap-1" style={{ fontSize: 12.5 }}><Check size={15} /> сохранено</span>}
+        {saved && <span className="text-pos flex items-center gap-1" style={{ fontSize: 12.5 }}><Check size={15} /> saved</span>}
       </div>
     </div>
   );

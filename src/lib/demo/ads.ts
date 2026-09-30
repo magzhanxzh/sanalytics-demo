@@ -5,13 +5,13 @@ import { mulberry32, hashSeed } from "./prng";
 import type { ConnectorConfig, SpendRow, AdProvider } from "@/lib/connectors/types";
 import type { AfSync, AfSourceRow } from "@/lib/appsflyer/types";
 
-// Демо-ответы рекламных кабинетов и MMP. Расход считается от синтетических
-// таргет-регистраций (регистрации x CPR источника x шум), поэтому CAC/ROAS
-// на экранах согласованы с остальными цифрами.
+// Demo responses from ad accounts and the MMP. Spend is derived from synthetic
+// paid sign-ups (sign-ups x source CPR x noise), so CAC/ROAS
+// on screens are consistent with the other numbers.
 
 export const PROVIDER_OF_SOURCE: AdProvider[] = ["google_ads", "tiktok_ads", "meta_ads", "yandex_ads"];
 
-// Строки расхода по дням/кампаниям/странам за окно [from, to] включительно.
+// Spend rows by day/campaign/country for [from, to] inclusive.
 export function demoSpendRows(from: string, to: string): SpendRow[] {
   const agg = new Map<string, { date: string; source: number; country: string; campaign: string; regs: number }>();
   for (const u of afUsers(dayOf(from), dayOf(to) + 1)) {
@@ -22,8 +22,8 @@ export function demoSpendRows(from: string, to: string): SpendRow[] {
     cur.regs++;
     agg.set(key, cur);
   }
-  // Средние регистрации кампании в день: часть бюджета тратится ровно, независимо от
-  // того, сколько регистраций пришло в конкретный день (иначе расход копирует регистрации).
+  // Average campaign sign-ups per day: part of the budget is spent evenly regardless of
+  // how many sign-ups came on a given day (otherwise spend would mirror sign-ups).
   const campTotals = new Map<string, { regs: number; days: number }>();
   for (const a of agg.values()) {
     const k = `${a.source}|${a.country}|${a.campaign}`;
@@ -52,13 +52,13 @@ export function demoSpendRows(from: string, to: string): SpendRow[] {
   return rows.sort((x, y) => (x.date < y.date ? -1 : x.date > y.date ? 1 : 0));
 }
 
-// «Проверка» кабинета в демо: реального запроса нет.
+// Ad account "test" in the demo: no real request.
 export function demoTest(cfg: ConnectorConfig): { ok: boolean; detail?: string; error?: string } {
   const label = cfg.id === "telegram" ? "@sanalytics_demo_bot" : "Demo account (USD)";
-  return { ok: true, detail: `${label}, демо-режим: запрос к API не отправлялся` };
+  return { ok: true, detail: `${label}, demo mode: no API request was sent` };
 }
 
-// Агрегат AppsFlyer (медиа-источник x окно) для карточки MMP на Интеграциях.
+// AppsFlyer aggregate (media source x window) for the MMP card in Integrations.
 export function demoAfAggregate(from: string, to: string): AfSync {
   const bySource = new Map<string, AfSourceRow>();
   let android = 0, ios = 0;
@@ -68,7 +68,7 @@ export function demoAfAggregate(from: string, to: string): AfSync {
   for (const u of afUsers(dayOf(from), dayOf(to) + 1)) {
     const src = u.group === AF_TARGET ? AD_SOURCES[u.source] : u.group === AF_ORGANIC ? "organic" : "restricted";
     const row = bySource.get(src) ?? { mediaSource: src, impressions: 0, clicks: 0, installs: 0, cost: 0 };
-    // установок больше, чем регистраций: не все установившие регистрируются
+    // more installs than sign-ups: not everyone who installs signs up
     row.installs += 1.35;
     bySource.set(src, row);
     if (u.regDay % 3 === 0) ios++; else android++;
@@ -90,6 +90,6 @@ export function demoAfAggregate(from: string, to: string): AfSync {
       { id: "id000000001", platform: "ios", installs: Math.round(totalInstalls * (1 - share)), cost: Math.round(totalCost * (1 - share)) },
     ],
     totalInstalls, totalCost,
-    note: "Демо-режим: агрегат собран из синтетических данных, Pull API не вызывался.",
+    note: "Demo mode: the aggregate is built from synthetic data, the Pull API was not called.",
   };
 }

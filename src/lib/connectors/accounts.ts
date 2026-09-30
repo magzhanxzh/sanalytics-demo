@@ -2,9 +2,9 @@ import "server-only";
 import { specOf, type AdAccount, type AdAccountView, type AdProvider } from "./types";
 import { memStore } from "@/lib/demo/memstore";
 
-// Рекламные кабинеты по странам: несколько на площадку. Секреты хранятся на сервере,
-// наружу не отдаются (viewOf). В продакшене список лежит в файле на сервере;
-// в демо это память процесса с заранее заведёнными кабинетами.
+// Ad accounts per country: several per platform. Secrets stay on the server
+// and are never exposed (viewOf). In production the list lives in a file on the server;
+// in the demo it is process memory with pre-configured accounts.
 
 const DEMO_FIELDS: Record<AdProvider, Record<string, string>> = {
   meta_ads: { account_id: "act_0000000001", access_token: "demo" },
@@ -58,12 +58,12 @@ export async function getAccount(id: string): Promise<AdAccount | undefined> {
   return (await readAll()).find((a) => a.id === id);
 }
 
-// Создать/обновить. Секреты: пустое значение = «оставить как было» (не затираем).
+// Create or update. Secrets: an empty value means "keep as is" (not overwritten).
 export async function upsertAccount(input: {
   id?: string; provider: AdProvider; country: string; label?: string; enabled?: boolean; fields?: Record<string, string>;
 }): Promise<AdAccount> {
   const spec = specOf(input.provider);
-  if (!spec) throw new Error("Неизвестная площадка: " + input.provider);
+  if (!spec) throw new Error("Unknown platform: " + input.provider);
   const all = await readAll();
   const idx = input.id ? all.findIndex((a) => a.id === input.id) : -1;
   const cur: AdAccount = idx >= 0 ? all[idx] : { id: "adacc_" + Math.random().toString(36).slice(2, 10), provider: input.provider, country: input.country, enabled: false, fields: {} };
@@ -72,7 +72,7 @@ export async function upsertAccount(input: {
     for (const f of spec.fields) {
       const incoming = input.fields[f.key];
       if (incoming === undefined) continue;
-      if (f.secret && incoming === "") continue; // пустой секрет -> не менять
+      if (f.secret && incoming === "") continue; // empty secret -> keep
       fields[f.key] = incoming.trim();
     }
   }

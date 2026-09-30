@@ -15,10 +15,10 @@ export async function GET() {
   return NextResponse.json({ config: view(cfg), lastSync: last, canManage: await canManageConnections() });
 }
 
-// Токен: null|undefined = «оставить как было».
+// Token: null|undefined means "keep as is".
 export async function PUT(req: Request) {
   if (!(await canManageConnections())) {
-    return NextResponse.json({ error: "Недостаточно прав. Менять интеграцию может владелец или админ." }, { status: 403 });
+    return NextResponse.json({ error: "Not allowed. Only the owner or an admin can change the integration." }, { status: 403 });
   }
   const body = (await req.json().catch(() => ({}))) as { token?: string | null; apps?: AfApp[]; timezone?: string };
   const current = await getAfConfig();
@@ -26,7 +26,7 @@ export async function PUT(req: Request) {
   const apps = (Array.isArray(body.apps) ? body.apps : [])
     .map((a) => ({ id: (a.id ?? "").trim(), platform: a.platform ?? "other" }))
     .filter((a) => a.id);
-  if (apps.length === 0) return NextResponse.json({ error: "Укажите хотя бы один App ID." }, { status: 400 });
+  if (apps.length === 0) return NextResponse.json({ error: "Set at least one App ID." }, { status: 400 });
 
   const saved = await saveAfConfig({ ...emptyAfConfig(), token, apps, timezone: (body.timezone ?? "").trim() });
   const last = await getLastSync();

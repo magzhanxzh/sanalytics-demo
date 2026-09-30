@@ -3,8 +3,8 @@ import type { ConnectorConfig, SpendRow } from "./types";
 import { liveConnectors } from "@/lib/demo/mode";
 import { demoTest, demoSpendRows } from "@/lib/demo/ads";
 
-// Настоящие клиенты API рекламных кабинетов и Telegram. В демо-режиме (по умолчанию)
-// диспетчеры внизу файла отвечают синтетикой и никуда не ходят.
+// Real API clients for ad accounts and Telegram. In demo mode (the default)
+// the dispatchers at the bottom of the file return synthetic data and call nothing.
 
 export type TestResult = { ok: boolean; detail?: string; error?: string };
 export type SpendResult = { ok: true; rows: SpendRow[] } | { ok: false; error: string };
@@ -18,7 +18,7 @@ async function jsonFetch(url: string, init?: RequestInit): Promise<{ status: num
   const res = await fetch(url, { ...init, signal: AbortSignal.timeout(TIMEOUT) });
   const body = await res.text();
   let json: unknown = null;
-  try { json = JSON.parse(body); } catch { /* не JSON */ }
+  try { json = JSON.parse(body); } catch { /* not JSON */ }
   return { status: res.status, body, json };
 }
 
@@ -29,7 +29,7 @@ function actId(raw: string): string {
 }
 export async function metaTest(cfg: ConnectorConfig): Promise<TestResult> {
   const { access_token, account_id } = cfg.fields;
-  if (!access_token || !account_id) return { ok: false, error: "Заполните Ad Account ID и Access Token." };
+  if (!access_token || !account_id) return { ok: false, error: "Fill in Ad Account ID and Access Token." };
   const url = `https://graph.facebook.com/v21.0/${actId(account_id)}?fields=name,currency&access_token=${encodeURIComponent(access_token)}`;
   try {
     const r = await jsonFetch(url);
@@ -40,7 +40,7 @@ export async function metaTest(cfg: ConnectorConfig): Promise<TestResult> {
 }
 export async function metaSpend(cfg: ConnectorConfig, from: string, to: string): Promise<SpendResult> {
   const { access_token, account_id } = cfg.fields;
-  if (!access_token || !account_id) return { ok: false, error: "Meta Ads не настроен." };
+  if (!access_token || !account_id) return { ok: false, error: "Meta Ads is not configured." };
   const rows: SpendRow[] = [];
   let url =
     `https://graph.facebook.com/v21.0/${actId(account_id)}/insights` +
@@ -70,21 +70,21 @@ export async function metaSpend(cfg: ConnectorConfig, from: string, to: string):
 const TT_BASE = "https://business-api.tiktok.com/open_api/v1.3";
 export async function tiktokTest(cfg: ConnectorConfig): Promise<TestResult> {
   const { access_token, advertiser_id } = cfg.fields;
-  if (!access_token || !advertiser_id) return { ok: false, error: "Заполните Advertiser ID и Access Token." };
+  if (!access_token || !advertiser_id) return { ok: false, error: "Fill in Advertiser ID and Access Token." };
   const url = `${TT_BASE}/advertiser/info/?advertiser_ids=${encodeURIComponent(JSON.stringify([advertiser_id]))}&fields=${encodeURIComponent(JSON.stringify(["name", "currency"]))}`;
   try {
     const r = await jsonFetch(url, { headers: { "Access-Token": access_token } });
     const j = r.json as { code?: number; message?: string; data?: { list?: Array<{ name?: string; currency?: string }> } };
     if (j?.code === 0) {
       const a = j.data?.list?.[0];
-      return { ok: true, detail: a ? `${a.name} (${a.currency ?? "?"})` : "ок" };
+      return { ok: true, detail: a ? `${a.name} (${a.currency ?? "?"})` : "ok" };
     }
     return { ok: false, error: j?.message || r.body.slice(0, 160) };
   } catch (e) { return { ok: false, error: String(e).slice(0, 160) }; }
 }
 export async function tiktokSpend(cfg: ConnectorConfig, from: string, to: string): Promise<SpendResult> {
   const { access_token, advertiser_id } = cfg.fields;
-  if (!access_token || !advertiser_id) return { ok: false, error: "TikTok Ads не настроен." };
+  if (!access_token || !advertiser_id) return { ok: false, error: "TikTok Ads is not configured." };
   const rows: SpendRow[] = [];
   const dims = JSON.stringify(["campaign_id", "stat_time_day"]);
   const metrics = JSON.stringify(["spend", "impressions", "clicks", "campaign_name"]);
@@ -120,7 +120,7 @@ export async function tiktokSpend(cfg: ConnectorConfig, from: string, to: string
 /* ----------------------------- Google Ads ----------------------------- */
 async function googleAccessToken(cfg: ConnectorConfig): Promise<{ ok: true; token: string } | { ok: false; error: string }> {
   const { client_id, client_secret, refresh_token } = cfg.fields;
-  if (!client_id || !client_secret || !refresh_token) return { ok: false, error: "Заполните OAuth client_id/secret/refresh_token." };
+  if (!client_id || !client_secret || !refresh_token) return { ok: false, error: "Fill in OAuth client_id/secret/refresh_token." };
   try {
     const r = await jsonFetch("https://oauth2.googleapis.com/token", {
       method: "POST",
@@ -142,7 +142,7 @@ function googleHeaders(cfg: ConnectorConfig, token: string): Record<string, stri
   return h;
 }
 export async function googleTest(cfg: ConnectorConfig): Promise<TestResult> {
-  if (!cfg.fields.customer_id || !cfg.fields.developer_token) return { ok: false, error: "Заполните Customer ID и Developer Token." };
+  if (!cfg.fields.customer_id || !cfg.fields.developer_token) return { ok: false, error: "Fill in Customer ID and Developer Token." };
   const tok = await googleAccessToken(cfg);
   if (!tok.ok) return { ok: false, error: tok.error };
   const cid = cfg.fields.customer_id.replace(/-/g, "");
@@ -152,7 +152,7 @@ export async function googleTest(cfg: ConnectorConfig): Promise<TestResult> {
       body: JSON.stringify({ query: "SELECT customer.descriptive_name FROM customer LIMIT 1" }),
     });
     const j = r.json as { results?: Array<{ customer?: { descriptiveName?: string } }>; error?: { message?: string } };
-    if (r.status === 200) return { ok: true, detail: j.results?.[0]?.customer?.descriptiveName || "ок" };
+    if (r.status === 200) return { ok: true, detail: j.results?.[0]?.customer?.descriptiveName || "ok" };
     return { ok: false, error: j?.error?.message || r.body.slice(0, 200) };
   } catch (e) { return { ok: false, error: String(e).slice(0, 160) }; }
 }
@@ -196,13 +196,13 @@ function ydHeaders(cfg: ConnectorConfig): Record<string, string> {
   return {
     Authorization: `Bearer ${cfg.fields.oauth_token}`,
     "Client-Login": cfg.fields.login ?? "",
-    "Accept-Language": "ru",
+    "Accept-Language": "en",
     "Content-Type": "application/json; charset=utf-8",
   };
 }
 export async function yandexTest(cfg: ConnectorConfig): Promise<TestResult> {
   const { oauth_token, login } = cfg.fields;
-  if (!oauth_token || !login) return { ok: false, error: "Заполните Client-Login и OAuth Token." };
+  if (!oauth_token || !login) return { ok: false, error: "Fill in Client-Login and OAuth Token." };
   try {
     const res = await fetch(`${YD_API}/campaigns`, {
       method: "POST", headers: ydHeaders(cfg), signal: AbortSignal.timeout(TIMEOUT),
@@ -211,13 +211,13 @@ export async function yandexTest(cfg: ConnectorConfig): Promise<TestResult> {
     const body = await res.text();
     let j: unknown = null; try { j = JSON.parse(body); } catch { /* */ }
     const jj = j as { result?: unknown; error?: { error_detail?: string; error_string?: string } };
-    if (res.status === 200 && jj?.result) return { ok: true, detail: "доступ к Директу подтверждён" };
+    if (res.status === 200 && jj?.result) return { ok: true, detail: "Direct access confirmed" };
     return { ok: false, error: jj?.error?.error_detail || jj?.error?.error_string || body.slice(0, 160) };
   } catch (e) { return { ok: false, error: String(e).slice(0, 160) }; }
 }
 export async function yandexSpend(cfg: ConnectorConfig, from: string, to: string): Promise<SpendResult> {
   const { oauth_token, login } = cfg.fields;
-  if (!oauth_token || !login) return { ok: false, error: "Yandex Direct не настроен." };
+  if (!oauth_token || !login) return { ok: false, error: "Yandex Direct is not configured." };
   const headers: Record<string, string> = {
     ...ydHeaders(cfg),
     processingMode: "auto",
@@ -238,7 +238,7 @@ export async function yandexSpend(cfg: ConnectorConfig, from: string, to: string
     },
   });
   try {
-    // Отчёты Директа асинхронные: 200 = готов, 201/202 = в очереди/готовится, ждём Retry-In.
+    // Direct reports are async: 200 = ready, 201/202 = queued or building, wait for Retry-In.
     for (let attempt = 0; attempt < 8; attempt++) {
       const res = await fetch(`${YD_API}/reports`, { method: "POST", headers, body: reportBody, signal: AbortSignal.timeout(TIMEOUT) });
       if (res.status === 200) {
@@ -255,7 +255,7 @@ export async function yandexSpend(cfg: ConnectorConfig, from: string, to: string
       const jj = j as { error?: { error_detail?: string; error_string?: string } };
       return { ok: false, error: jj?.error?.error_detail || jj?.error?.error_string || body.slice(0, 200) };
     }
-    return { ok: false, error: "Отчёт Директа не готов за отведённое время, попробуйте ещё раз." };
+    return { ok: false, error: "The Direct report was not ready in time, please try again." };
   } catch (e) { return { ok: false, error: String(e).slice(0, 160) }; }
 }
 function parseYandexTsv(tsv: string): SpendRow[] {
@@ -283,31 +283,31 @@ function parseYandexTsv(tsv: string): SpendRow[] {
 /* ----------------------------- Telegram ----------------------------- */
 export async function telegramTest(cfg: ConnectorConfig): Promise<TestResult> {
   const { bot_token } = cfg.fields;
-  if (!bot_token) return { ok: false, error: "Заполните Bot Token." };
+  if (!bot_token) return { ok: false, error: "Fill in Bot Token." };
   try {
     const r = await jsonFetch(`https://api.telegram.org/bot${bot_token}/getMe`);
     const j = r.json as { ok?: boolean; result?: { username?: string }; description?: string };
-    if (j?.ok) return { ok: true, detail: `@${j.result?.username ?? "бот"}` };
+    if (j?.ok) return { ok: true, detail: `@${j.result?.username ?? "bot"}` };
     return { ok: false, error: j?.description || r.body.slice(0, 160) };
   } catch (e) { return { ok: false, error: String(e).slice(0, 160) }; }
 }
 async function telegramSendLive(cfg: ConnectorConfig, text: string): Promise<TestResult> {
   const { bot_token, chat_id } = cfg.fields;
-  if (!bot_token || !chat_id) return { ok: false, error: "Заполните Bot Token и Chat ID." };
+  if (!bot_token || !chat_id) return { ok: false, error: "Fill in Bot Token and Chat ID." };
   try {
     const r = await jsonFetch(`https://api.telegram.org/bot${bot_token}/sendMessage`, {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ chat_id, text, parse_mode: "HTML", disable_web_page_preview: true }),
     });
     const j = r.json as { ok?: boolean; description?: string };
-    if (j?.ok) return { ok: true, detail: "отправлено" };
+    if (j?.ok) return { ok: true, detail: "sent" };
     return { ok: false, error: j?.description || r.body.slice(0, 160) };
   } catch (e) { return { ok: false, error: String(e).slice(0, 160) }; }
 }
 
-/* ----------------------------- Диспетчеры ----------------------------- */
+/* ----------------------------- Dispatchers ----------------------------- */
 export async function telegramSend(cfg: ConnectorConfig, text: string): Promise<TestResult> {
-  if (!liveConnectors()) return { ok: true, detail: "демо-режим: сообщение не отправлялось" };
+  if (!liveConnectors()) return { ok: true, detail: "demo mode: no message was sent" };
   return telegramSendLive(cfg, text);
 }
 export async function testConnector(cfg: ConnectorConfig): Promise<TestResult> {
@@ -318,7 +318,7 @@ export async function testConnector(cfg: ConnectorConfig): Promise<TestResult> {
     case "google_ads": return googleTest(cfg);
     case "yandex_ads": return yandexTest(cfg);
     case "telegram": return telegramTest(cfg);
-    default: return { ok: false, error: "Неизвестный коннектор." };
+    default: return { ok: false, error: "Unknown connector." };
   }
 }
 export async function spendFrom(cfg: ConnectorConfig, from: string, to: string): Promise<SpendResult> {
@@ -328,6 +328,6 @@ export async function spendFrom(cfg: ConnectorConfig, from: string, to: string):
     case "tiktok_ads": return tiktokSpend(cfg, from, to);
     case "google_ads": return googleSpend(cfg, from, to);
     case "yandex_ads": return yandexSpend(cfg, from, to);
-    default: return { ok: false, error: "Этот коннектор не отдаёт расход." };
+    default: return { ok: false, error: "This connector does not provide spend." };
   }
 }

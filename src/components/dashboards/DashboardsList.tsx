@@ -6,8 +6,8 @@ import Link from "next/link";
 import { Plus, Trash2, BarChart3, Pencil, Share2, X, Check, Users } from "lucide-react";
 import { CURRENT_USER, type Dashboard, type WidgetType } from "@/lib/dashboards/types";
 
-// Мини-карта реального дашборда: каждый виджет – плитка на своём месте (по layout),
-// с цветом и глифом по типу. Без загрузки данных – отражает состав и раскладку.
+// Mini map of the real dashboard: each widget is a tile in its place (from layout),
+// with a color and glyph by type. No data loading, it reflects composition and layout.
 const TYPE_COLOR: Record<WidgetType, string> = {
   kpi: "--c2", line: "--c1", area: "--c1", bar: "--c3", pie: "--c4", table: "--c5", text: "--muted",
 };
@@ -88,12 +88,12 @@ export function DashboardsList() {
     const r = await fetch("/api/dashboards", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ title: "Новый дашборд" }),
+      body: JSON.stringify({ title: "New dashboard" }),
     }).then((x) => x.json());
     if (r.dashboard) router.push(`/dashboards/${r.dashboard.id}`);
   }
   async function remove(d: Dashboard) {
-    if (!window.confirm(`Удалить дашборд «${d.title}»? Это действие необратимо.`)) return;
+    if (!window.confirm(`Delete dashboard "${d.title}"? This cannot be undone.`)) return;
     await fetch(`/api/dashboards/${d.id}`, { method: "DELETE" }).catch(() => {});
     load();
   }
@@ -128,21 +128,21 @@ export function DashboardsList() {
             <div className="flex items-center gap-1.5">
               <Link href={`/dashboards/${d.id}`} style={{ fontSize: 13.5, fontWeight: 600 }} className="flex-1 truncate">{d.title}</Link>
               {d.owner === me && (
-                <button onClick={() => { setRenamingId(d.id); setRenameValue(d.title); }} className="text-muted hover:text-ink p-0.5" title="Переименовать"><Pencil size={13} /></button>
+                <button onClick={() => { setRenamingId(d.id); setRenameValue(d.title); }} className="text-muted hover:text-ink p-0.5" title="Rename"><Pencil size={13} /></button>
               )}
             </div>
           )}
           <div className="text-muted flex items-center gap-2" style={{ fontSize: 11.5, marginTop: 3 }}>
-            <span>{d.widgets.length} виджет(ов)</span>
+            <span>{d.widgets.length} {d.widgets.length === 1 ? "widget" : "widgets"}</span>
             {(d.sharedWith ?? []).length > 0 && (
               <span className="flex items-center gap-1"><Users size={11} /> {d.sharedWith.length}</span>
             )}
-            {d.owner !== me && <span>· от {d.owner}</span>}
+            {d.owner !== me && <span>· from {d.owner}</span>}
           </div>
           {d.owner === me && (
             <div className="flex items-center gap-3" style={{ marginTop: 10 }}>
-              <button onClick={() => setShareTarget(d)} className="flex items-center gap-1 text-accent" style={{ fontSize: 12 }}><Share2 size={13} /> Поделиться</button>
-              <button onClick={() => remove(d)} className="flex items-center gap-1 text-muted hover:text-neg" style={{ fontSize: 12 }}><Trash2 size={13} /> Удалить</button>
+              <button onClick={() => setShareTarget(d)} className="flex items-center gap-1 text-accent" style={{ fontSize: 12 }}><Share2 size={13} /> Share</button>
+              <button onClick={() => remove(d)} className="flex items-center gap-1 text-muted hover:text-neg" style={{ fontSize: 12 }}><Trash2 size={13} /> Delete</button>
             </div>
           )}
         </div>
@@ -171,14 +171,14 @@ export function DashboardsList() {
   return (
     <div>
       <div className="flex items-center justify-between" style={{ marginBottom: 20 }}>
-        <span className="text-muted" style={{ fontSize: 13 }}>{list ? `${list.length} дашборд(ов)` : "загрузка…"}</span>
+        <span className="text-muted" style={{ fontSize: 13 }}>{list ? `${list.length} ${list.length === 1 ? "dashboard" : "dashboards"}` : "loading…"}</span>
         <button onClick={create} className="flex items-center gap-2 text-[color:var(--accent-ink)]" style={{ background: "var(--accent)", borderRadius: 8, padding: "8px 14px", fontSize: 12.5, fontWeight: 500 }}>
-          <Plus size={15} /> Новый дашборд
+          <Plus size={15} /> New dashboard
         </button>
       </div>
 
-      <Section title="Моя рабочая зона" items={mine} empty="Здесь ваши дашборды. Создайте первый." />
-      <Section title="Предоставили доступ" hint="дашборды, которыми поделились с вами" items={shared} empty="Пока никто не поделился с вами дашбордом." />
+      <Section title="My workspace" items={mine} empty="Your dashboards live here. Create the first one." />
+      <Section title="Shared with me" hint="dashboards other people shared with you" items={shared} empty="Nobody has shared a dashboard with you yet." />
 
       {shareTarget && (
         <ShareModal
@@ -209,7 +209,7 @@ function ShareModal({ dashboard, onClose, onChange }: { dashboard: Dashboard; on
     <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: "rgba(0,0,0,0.35)" }} onClick={onClose}>
       <div className="bg-surface border border-line rounded-xl w-full" style={{ maxWidth: 440 }} onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between border-b border-line" style={{ padding: "14px 18px" }}>
-          <h2 className="font-semibold" style={{ fontSize: 15 }}>Доступ к «{dashboard.title}»</h2>
+          <h2 className="font-semibold" style={{ fontSize: 15 }}>Access to “{dashboard.title}”</h2>
           <button onClick={onClose} className="text-muted hover:text-ink"><X size={18} /></button>
         </div>
         <div style={{ padding: 18 }}>
@@ -218,31 +218,31 @@ function ShareModal({ dashboard, onClose, onChange }: { dashboard: Dashboard; on
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter") add(); }}
-              placeholder="email коллеги"
+              placeholder="colleague email"
               className="flex-1 border border-line bg-surface rounded-lg"
               style={{ padding: "8px 10px", fontSize: 13 }}
             />
-            <button onClick={add} className="text-[color:var(--accent-ink)]" style={{ background: "var(--accent)", borderRadius: 8, padding: "8px 14px", fontSize: 13, fontWeight: 500 }}>Добавить</button>
+            <button onClick={add} className="text-[color:var(--accent-ink)]" style={{ background: "var(--accent)", borderRadius: 8, padding: "8px 14px", fontSize: 13, fontWeight: 500 }}>Add</button>
           </div>
           <div className="flex flex-col gap-1" style={{ marginTop: 14 }}>
-            <div className="text-muted" style={{ fontSize: 11.5, marginBottom: 4 }}>Есть доступ:</div>
+            <div className="text-muted" style={{ fontSize: 11.5, marginBottom: 4 }}>Has access:</div>
             <div className="flex items-center gap-2" style={{ fontSize: 13 }}>
               <span className="mono flex items-center justify-center bg-sunk border border-line" style={{ width: 24, height: 24, borderRadius: 99, fontSize: 11 }}>{dashboard.owner[0]?.toUpperCase()}</span>
-              {dashboard.owner} <span className="text-muted" style={{ fontSize: 12 }}>· владелец</span>
+              {dashboard.owner} <span className="text-muted" style={{ fontSize: 12 }}>· owner</span>
             </div>
             {shared.length === 0 ? (
-              <div className="text-muted" style={{ fontSize: 12.5, marginTop: 4 }}>Пока только у вас.</div>
+              <div className="text-muted" style={{ fontSize: 12.5, marginTop: 4 }}>Only you so far.</div>
             ) : (
               shared.map((u) => (
                 <div key={u} className="flex items-center gap-2 justify-between" style={{ fontSize: 13, padding: "4px 0" }}>
                   <span className="flex items-center gap-2"><Check size={14} className="text-pos" /> {u}</span>
-                  <button onClick={() => removeUser(u)} className="text-muted hover:text-neg" title="Убрать"><X size={14} /></button>
+                  <button onClick={() => removeUser(u)} className="text-muted hover:text-neg" title="Remove"><X size={14} /></button>
                 </div>
               ))
             )}
           </div>
           <p className="text-muted" style={{ fontSize: 11.5, marginTop: 14 }}>
-            Реальная выдача доступа заработает после подключения авторизации. Пока список сохраняется в дашборде.
+            Real access control works once auth is connected. For now the list is saved in the dashboard.
           </p>
         </div>
       </div>

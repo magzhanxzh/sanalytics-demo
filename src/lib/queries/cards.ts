@@ -1,17 +1,17 @@
-// ФИЛЬТРЫ, ТИПЫ И ФОРМАТИРОВАНИЕ КАРТОЧЕК И ГРАФИКА МАРКЕТИНГА.
+// FILTERS, TYPES AND FORMATTING FOR MARKETING CARDS AND CHART.
 //
-// Фильтры едут в URL и применяются при изменении чипа:
-//   - from, to        диапазон дат по времени заказа
-//   - country         страна пользователя: KZ|UZ|KG|TJ|MN|all
-//   - orderCreator    канал ЗАКАЗА: значение | all
-//   - userCreator     канал РЕГИСТРАЦИИ: значение | all
-//   - regFrom, regTo  период регистрации (когорта), '' = выкл
-//   - basis           выручка gross (все заказы) | paid (только оплаченные)
-//   - excludeB2b      исключать корпоративные аккаунты (>50 заказов в месяц)
+// Filters travel in the URL and apply when a chip changes:
+//   - from, to        date range by order time
+//   - country         user country: KZ|UZ|KG|TJ|MN|all
+//   - orderCreator    ORDER channel: value | all
+//   - userCreator     SIGN-UP channel: value | all
+//   - regFrom, regTo  sign-up period (cohort), '' = off
+//   - basis           revenue gross (all orders) | paid (paid only)
+//   - excludeB2b      exclude business accounts (>50 orders a month)
 //
-// В продакшене здесь же лежали SQL-билдеры под ClickHouse (buildOverviewSql и др.).
-// В демо запросы исполняет синтетическое хранилище src/lib/demo/warehouse.ts,
-// а слой метрик (src/lib/metrics.ts) вызывает его через те же фильтры.
+// In production this file also held the ClickHouse SQL builders (buildOverviewSql and others).
+// In the demo queries run against the synthetic store src/lib/demo/warehouse.ts,
+// and the metrics layer (src/lib/metrics.ts) calls it with the same filters.
 
 import { ORDER_CHANNELS, USER_CHANNELS } from "@/lib/demo/dims";
 
@@ -19,33 +19,33 @@ export type RevenueBasis = "gross" | "paid";
 export type Grain = "day" | "week" | "month";
 
 export type CardFilters = {
-  from: string; // YYYY-MM-DD, дата заказа с
-  to: string; // YYYY-MM-DD, дата заказа по (включительно по дню)
-  country: string; // код страны или 'all'
-  orderCreator: string; // значение или 'all'
-  userCreator: string; // значение или 'all'
-  regFrom: string; // YYYY-MM-DD, период регистрации с ('' = без фильтра)
-  regTo: string; // YYYY-MM-DD, период регистрации по ('' = без фильтра)
+  from: string; // YYYY-MM-DD, order date from
+  to: string; // YYYY-MM-DD, order date to (inclusive)
+  country: string; // country code or 'all'
+  orderCreator: string; // value or 'all'
+  userCreator: string; // value or 'all'
+  regFrom: string; // YYYY-MM-DD, sign-up period from ('' = no filter)
+  regTo: string; // YYYY-MM-DD, sign-up period to ('' = no filter)
   basis: RevenueBasis;
   excludeB2b: boolean;
-  grain: Grain; // гранулярность графика
+  grain: Grain; // chart granularity
 };
 
-// Активен ли когортный фильтр по дате регистрации.
+// Whether the sign-up date cohort filter is active.
 export function regActive(f: CardFilters): boolean {
   return Boolean(f.regFrom && f.regTo);
 }
 
 export const COUNTRIES = [
-  { code: "all", label: "Все страны" },
-  { code: "KZ", label: "Казахстан" },
-  { code: "UZ", label: "Узбекистан" },
-  { code: "KG", label: "Кыргызстан" },
-  { code: "TJ", label: "Таджикистан" },
-  { code: "MN", label: "Монголия" },
+  { code: "all", label: "All countries" },
+  { code: "KZ", label: "Kazakhstan" },
+  { code: "UZ", label: "Uzbekistan" },
+  { code: "KG", label: "Kyrgyzstan" },
+  { code: "TJ", label: "Tajikistan" },
+  { code: "MN", label: "Mongolia" },
 ];
 
-// Списки каналов для выпадашек (до ответа /api/meta/creators).
+// Channel lists for dropdowns (until /api/meta/creators responds).
 export const FALLBACK_CREATORS: string[] = [...ORDER_CHANNELS];
 export const FALLBACK_USER_CREATORS: string[] = [...USER_CHANNELS];
 
@@ -88,15 +88,15 @@ export { num };
 export function formatCardValue(unit: CardUnit, value: number): string {
   switch (unit) {
     case "currency":
-      return "$" + Math.round(value).toLocaleString("ru-RU");
+      return "$" + Math.round(value).toLocaleString("en-US");
     case "currency2":
-      return "$" + value.toLocaleString("ru-RU", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      return "$" + value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     case "weight":
-      return value.toLocaleString("ru-RU", { maximumFractionDigits: 2 }) + " кг";
+      return value.toLocaleString("en-US", { maximumFractionDigits: 2 }) + " kg";
     case "percent":
       return value.toFixed(1) + "%";
     default:
-      return Math.round(value).toLocaleString("ru-RU");
+      return Math.round(value).toLocaleString("en-US");
   }
 }
 
@@ -107,7 +107,7 @@ export function deltaPct(value: number, prev: number): number | null {
 
 const ISO = /^\d{4}-\d{2}-\d{2}$/;
 
-// Разбор фильтров из query-параметров (URL) с дефолтами.
+// Parse filters from URL query parameters with defaults.
 export function parseFilters(sp: Record<string, string | string[] | undefined>): CardFilters {
   const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v);
   const d = defaultFilters();
@@ -123,8 +123,8 @@ export function parseFilters(sp: Record<string, string | string[] | undefined>):
   const grainRaw = one(sp.grain);
   const grain: Grain = grainRaw === "week" || grainRaw === "month" ? grainRaw : "day";
 
-  // Пустой явный параметр (from=) означает «не задан» -> данные за период по умолчанию.
-  // Отсутствие параметра -> дефолтный период (посадочная страница).
+  // An explicit empty parameter (from=) means "not set" -> data for the default period.
+  // A missing parameter -> the default period (landing page).
   return {
     from: from === "" ? "" : from && ISO.test(from) ? from : d.from,
     to: to === "" ? "" : to && ISO.test(to) ? to : d.to,
@@ -139,10 +139,12 @@ export function parseFilters(sp: Record<string, string | string[] | undefined>):
   };
 }
 
-// Диапазон дат для подписей: «17.09 – 24.09.2026» (год один раз, если совпадает).
+// Date range for labels: "Sep 17 – Sep 24, 2026" (year once if it matches).
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 export function formatRange(from: string, to: string): string {
   if (!from || !to) return "";
   const [fy, fm, fd] = from.split("-");
   const [ty, tm, td] = to.split("-");
-  return fy === ty ? `${fd}.${fm} – ${td}.${tm}.${ty}` : `${fd}.${fm}.${fy} – ${td}.${tm}.${ty}`;
+  const md = (m: string, d: string) => `${MONTHS[Number(m) - 1]} ${Number(d)}`;
+  return fy === ty ? `${md(fm, fd)} – ${md(tm, td)}, ${ty}` : `${md(fm, fd)}, ${fy} – ${md(tm, td)}, ${ty}`;
 }

@@ -19,7 +19,7 @@ type Analysis = {
 type DailyPoint = { date: string; spend: number; registrations: number };
 type DailySeries = { channel: string; points: DailyPoint[] };
 
-const nf = new Intl.NumberFormat("ru-RU");
+const nf = new Intl.NumberFormat("en-US");
 const money = (v: number) => "$" + nf.format(Math.round(v));
 const pct = (v: number) => v.toFixed(1) + "%";
 
@@ -42,18 +42,18 @@ export function AfAnalysisView({ query, basis }: { query: string; basis: "gross"
     return () => { if (timer.current) { clearInterval(timer.current); timer.current = null; } };
   }, [loading]);
 
-  // Построение анализа. По умолчанию сразу подтягивает расход из кабинетов (sync=1);
-  // rebuildMap – дополнительно пересобирает суточную карту AppsFlyer.
+  // Builds the analysis. By default it also pulls spend from ad accounts (sync=1);
+  // rebuildMap additionally rebuilds the daily AppsFlyer map.
   async function run(mode: "build" | "rebuildMap") {
     setLoading(true); setErr(""); setData(null);
     const extra = mode === "rebuildMap" ? "&rebuildMap=1&sync=1" : "&sync=1";
     try {
       const r = await fetch(`/api/af-analysis?${query}${extra}`, { cache: "no-store" });
-      if (r.status === 401) { setErr("Требуется вход. Обновите страницу и войдите."); return; }
+      if (r.status === 401) { setErr("Sign-in required. Reload the page and sign in."); return; }
       const d: Analysis = await r.json();
       setData(d);
       if (d.error) setErr(d.error);
-    } catch (e) { setErr("Сбой запроса: " + String(e).slice(0, 200)); }
+    } catch (e) { setErr("Request failed: " + String(e).slice(0, 200)); }
     finally { setLoading(false); }
   }
 
@@ -64,21 +64,21 @@ export function AfAnalysisView({ query, basis }: { query: string; basis: "gross"
   const organic = data?.groups.find((g) => g.key === "organic");
   const totals = data?.totals;
   const targetShare = target && totals && totals.registrations ? (target.registrations / totals.registrations) * 100 : 0;
-  const revLabel = basis === "paid" ? "Выручка (опл.)" : "Выручка";
+  const revLabel = basis === "paid" ? "Revenue (paid)" : "Revenue";
 
   return (
     <div style={{ padding: "18px 28px 60px", display: "flex", flexDirection: "column", gap: 18 }}>
       <div className="flex flex-wrap items-center gap-2">
         <button onClick={() => run("build")} disabled={loading} className="inline-flex items-center gap-1.5 text-[color:var(--accent-ink)] disabled:opacity-50" style={{ background: "var(--accent)", borderRadius: 8, padding: "8px 16px", fontSize: 13, fontWeight: 500 }}>
-          {loading ? <Loader2 size={15} className="animate-spin" /> : <Play size={15} />} Построить анализ
+          {loading ? <Loader2 size={15} className="animate-spin" /> : <Play size={15} />} Build analysis
         </button>
         {data && !notReady && access.canManage && (
-          <button onClick={() => run("rebuildMap")} disabled={loading} title="Пересобрать суточную карту AppsFlyer за 90 дней сейчас (тратит квоту AF; обычно не нужно – карта обновляется каждое утро). Доступно владельцу/админу." className="inline-flex items-center gap-1.5 border border-line hover:border-line-2 disabled:opacity-50" style={{ borderRadius: 8, padding: "8px 12px", fontSize: 12.5 }}>
-            <RefreshCw size={14} /> Обновить карту AF
+          <button onClick={() => run("rebuildMap")} disabled={loading} title="Rebuild the daily AppsFlyer map for 90 days now (uses AF quota; usually not needed, the map refreshes every morning). Owner and admin only." className="inline-flex items-center gap-1.5 border border-line hover:border-line-2 disabled:opacity-50" style={{ borderRadius: 8, padding: "8px 12px", fontSize: 12.5 }}>
+            <RefreshCw size={14} /> Refresh AF map
           </button>
         )}
         <span className="text-muted" style={{ fontSize: 12 }}>
-          Матчим user_id из AppsFlyer с заказами в хранилище + расход из кабинетов. Карта AF грузится раз в утро за 90 дней.
+          Matches AppsFlyer user_id with orders in the warehouse, plus spend from ad accounts. The AF map loads every morning for 90 days.
         </span>
       </div>
 
@@ -86,25 +86,25 @@ export function AfAnalysisView({ query, basis }: { query: string; basis: "gross"
         <div className="border border-line bg-surface rounded-xl flex items-center gap-3" style={{ padding: 18 }}>
           <Loader2 size={18} className="animate-spin" style={{ color: "var(--accent)" }} />
           <div style={{ fontSize: 13 }}>
-            <div>Считаем срез и матчим с заказами… {elapsed} с</div>
-            <div className="text-muted" style={{ fontSize: 11.5, marginTop: 2 }}>Обычно несколько секунд (карта AF уже загружена). «Обновить карту AF» – первая загрузка за 90 дней 1–2 минуты.</div>
+            <div>Computing the slice and matching orders… {elapsed} s</div>
+            <div className="text-muted" style={{ fontSize: 11.5, marginTop: 2 }}>Usually a few seconds (the AF map is already loaded). “Refresh AF map” does a first 90-day load in 1–2 minutes.</div>
           </div>
         </div>
       )}
 
       {!data && !loading && (
         <div className="border border-line bg-surface rounded-xl text-muted" style={{ padding: 22, fontSize: 13, lineHeight: 1.6 }}>
-          Задайте фильтры сверху и нажмите «Построить анализ». Канал (таргет/органика) берётся из карты AppsFlyer по user_id за период регистрации.
+          Set the filters above and click “Build analysis”. The channel (paid or organic) comes from the AppsFlyer map by user_id for the sign-up period.
           <div style={{ marginTop: 8, color: "var(--ink-2)" }}>
-            Совет: AppsFlyer покрывает только мобильное приложение, поэтому для осмысленного результата задайте <b>Канал клиента = app</b> и <b>Период регистрации</b> внутри последних 90 дней. Расход/CAC/ROAS подтянутся автоматически из подключённых на «Интеграции» кабинетов.
+            Tip: AppsFlyer covers only the mobile app, so for a meaningful result set <b>User channel = app</b> and a <b>Sign-up period</b> within the last 90 days. Spend, CAC and ROAS are pulled automatically from the ad accounts connected in Integrations.
           </div>
         </div>
       )}
 
       {notReady && (
         <div className="border border-line bg-surface rounded-xl" style={{ padding: 22, fontSize: 13 }}>
-          {!data!.afConfigured && <p>AppsFlyer не настроен. Задайте токен и App ID на экране «Интеграции».</p>}
-          {!data!.chConfigured && <p>Хранилище не подключено. Настройте подключение на «Интеграции».</p>}
+          {!data!.afConfigured && <p>AppsFlyer is not configured. Set the token and App ID in Integrations.</p>}
+          {!data!.chConfigured && <p>The warehouse is not connected. Set up the connection in Integrations.</p>}
         </div>
       )}
 
@@ -112,9 +112,9 @@ export function AfAnalysisView({ query, basis }: { query: string; basis: "gross"
 
       {mapFailed && (
         <div className="rounded-xl" style={{ padding: 16, fontSize: 13, lineHeight: 1.55, background: "oklch(0.96 0.04 60)", border: "1px solid oklch(0.85 0.08 60)", color: "var(--ink)" }}>
-          <b>Карта AppsFlyer не загрузилась – разбивка на таргет и органику недоступна.</b> Всё показано как «Нет данных AF».
+          <b>The AppsFlyer map did not load, so the paid vs organic split is unavailable.</b> Everything is shown as “No AF data”.
           {quotaHit ? (
-            <div style={{ marginTop: 6 }}>Причина: исчерпана <b>суточная квота AppsFlyer</b> на выгрузку сырых отчётов (лимит на приложение в сутки). Это не ошибка приложения. Что делать: открыть уже закэшированное окно (например «последние 30 дней»), либо подождать сброса квоты (обычно раз в сутки) и нажать «Обновить карту AF».</div>
+            <div style={{ marginTop: 6 }}>Reason: the <b>daily AppsFlyer quota</b> for raw data reports is used up (a per-app daily limit). This is not an app error. What to do: open a window that is already cached (for example “last 30 days”), or wait for the quota to reset (usually daily) and click “Refresh AF map”.</div>
           ) : (
             <div style={{ marginTop: 6, fontFamily: "var(--font-mono, monospace)", fontSize: 11.5, color: "var(--muted)" }}>{data!.map!.errors[0]}</div>
           )}
@@ -123,81 +123,81 @@ export function AfAnalysisView({ query, basis }: { query: string; basis: "gross"
 
       {data && !notReady && !data.error && totals && (
         <>
-          {/* KPI-полоса */}
+          {/* KPI strip */}
           <div className="grid" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))", gap: 14 }}>
-            <Kpi title="Регистраций всего" value={nf.format(totals.registrations)} />
+            <Kpi title="Total sign-ups" value={nf.format(totals.registrations)} />
             {mapFailed ? (
               <>
-                <Kpi title="Покупатели" value={nf.format(totals.buyers)} />
-                <Kpi title="Конверсия" value={pct(totals.cr)} accent />
-                <Kpi title="Разбивка AF" value="–" sub="карта не загружена" />
+                <Kpi title="Buyers" value={nf.format(totals.buyers)} />
+                <Kpi title="Conversion" value={pct(totals.cr)} accent />
+                <Kpi title="AF split" value="–" sub="map not loaded" />
               </>
             ) : (
               <>
-                <Kpi title="Доля таргета" value={pct(targetShare)} sub={target ? `${nf.format(target.registrations)} рег.` : "–"} />
-                <Kpi title="CR таргета" value={target ? pct(target.cr) : "–"} sub={target ? `${nf.format(target.buyers)} покупателей` : ""} accent />
-                <Kpi title="CR органики" value={organic ? pct(organic.cr) : "–"} sub={organic ? `${nf.format(organic.buyers)} покупателей` : ""} />
+                <Kpi title="Paid share" value={pct(targetShare)} sub={target ? `${nf.format(target.registrations)} sign-ups` : "–"} />
+                <Kpi title="Paid CR" value={target ? pct(target.cr) : "–"} sub={target ? `${nf.format(target.buyers)} buyers` : ""} accent />
+                <Kpi title="Organic CR" value={organic ? pct(organic.cr) : "–"} sub={organic ? `${nf.format(organic.buyers)} buyers` : ""} />
               </>
             )}
-            <Kpi title="Покрытие AF" value={data.map ? pct(data.map.coverage) : "–"} sub={data.map ? `${nf.format(data.map.size)} пользователей в карте` : ""} />
+            <Kpi title="AF coverage" value={data.map ? pct(data.map.coverage) : "–"} sub={data.map ? `${nf.format(data.map.size)} users in the map` : ""} />
           </div>
 
-          {/* Таблица по группам */}
+          {/* Table by group */}
           <div className="border border-line bg-surface rounded-xl" style={{ padding: "16px 18px" }}>
-            <h2 className="font-semibold" style={{ fontSize: 14.5, marginBottom: 10 }}>Таргет против органики</h2>
+            <h2 className="font-semibold" style={{ fontSize: 14.5, marginBottom: 10 }}>Paid vs organic</h2>
             <GroupTable rows={[...data.groups, { ...totals }]} revLabel={revLabel} highlightTotalKey="total" />
           </div>
 
-          {/* Разбивка таргета по каналам (с расходом/CAC/ROAS если подключены кабинеты) */}
+          {/* Paid split by channel (with spend, CAC and ROAS if ad accounts are connected) */}
           {data.targetChannels.length > 0 && (
             <div className="border border-line bg-surface rounded-xl" style={{ padding: "16px 18px" }}>
               <div className="flex items-center justify-between" style={{ marginBottom: 10 }}>
-                <h2 className="font-semibold" style={{ fontSize: 14.5 }}>Таргет по каналам</h2>
+                <h2 className="font-semibold" style={{ fontSize: 14.5 }}>Paid by channel</h2>
                 {data.hasSpend
-                  ? (data.spendAttributed && <span className="text-muted" style={{ fontSize: 11, maxWidth: 480, textAlign: "right" }}>Расход – по стране показа рекламы из кабинета (Meta); кабинеты без разбивки по стране – пропорционально доле регистраций</span>)
-                  : <span className="text-muted" style={{ fontSize: 11 }}>Расход/CAC/ROAS появятся, когда подключите кабинеты на «Интеграции»</span>}
+                  ? (data.spendAttributed && <span className="text-muted" style={{ fontSize: 11, maxWidth: 480, textAlign: "right" }}>Spend by ad delivery country from the account (Meta); accounts without a country split are allocated by share of sign-ups</span>)
+                  : <span className="text-muted" style={{ fontSize: 11 }}>Spend, CAC and ROAS appear once you connect ad accounts in Integrations</span>}
               </div>
-              <GroupTable rows={data.targetChannels} revLabel={revLabel} showSpend={data.hasSpend} nameCol="Канал" />
+              <GroupTable rows={data.targetChannels} revLabel={revLabel} showSpend={data.hasSpend} nameCol="Channel" />
             </div>
           )}
 
-          {/* Расход и регистрации по дням – по каждому кабинету */}
+          {/* Daily spend and sign-ups per ad account */}
           {data.channelDaily && data.channelDaily.length > 0 && (
             <div className="border border-line bg-surface rounded-xl" style={{ padding: "16px 18px" }}>
-              <h2 className="font-semibold" style={{ fontSize: 14.5, marginBottom: 4 }}>Расход и регистрации по дням</h2>
-              <p className="text-muted" style={{ fontSize: 11.5, marginBottom: 12 }}>По каждому кабинету: расход (оранжевая) и регистрации (акцент) по дням.</p>
+              <h2 className="font-semibold" style={{ fontSize: 14.5, marginBottom: 4 }}>Daily spend and sign-ups</h2>
+              <p className="text-muted" style={{ fontSize: 11.5, marginBottom: 12 }}>For each ad account: spend (orange) and sign-ups (accent) by day.</p>
               <div className="grid" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(380px, 1fr))", gap: 16 }}>
                 {data.channelDaily.map((s) => <DailyChart key={s.channel} series={s} />)}
               </div>
             </div>
           )}
 
-          {/* Рекламные кампании */}
+          {/* Ad campaigns */}
           {data.targetChannels.length > 0 && (() => {
-            const named = data.targetCampaigns.filter((c) => c.key !== "(без кампании)");
+            const named = data.targetCampaigns.filter((c) => c.key !== "(no campaign)");
             return (
               <div className="border border-line bg-surface rounded-xl" style={{ padding: "16px 18px" }}>
-                <h2 className="font-semibold" style={{ fontSize: 14.5, marginBottom: 10 }}>Рекламные кампании</h2>
+                <h2 className="font-semibold" style={{ fontSize: 14.5, marginBottom: 10 }}>Ad campaigns</h2>
                 {named.length > 0 ? (
                   <div style={{ maxHeight: 360, overflowY: "auto" }}>
-                    <GroupTable rows={data.targetCampaigns} revLabel={revLabel} nameCol="Кампания" showSpend={data.hasCampaignSpend} />
+                    <GroupTable rows={data.targetCampaigns} revLabel={revLabel} nameCol="Campaign" showSpend={data.hasCampaignSpend} />
                   </div>
                 ) : (
-                  <div className="text-muted" style={{ fontSize: 12.5 }}>Разбивка по кампаниям появится после следующей сборки карты AppsFlyer (кнопка «Обновить карту AF» при доступной квоте или автоматически утром). Текущая карта была собрана без поля кампании.</div>
+                  <div className="text-muted" style={{ fontSize: 12.5 }}>The campaign split will appear after the next AppsFlyer map build (the “Refresh AF map” button when quota allows, or automatically in the morning). The current map was built without the campaign field.</div>
                 )}
               </div>
             );
           })()}
 
-          {/* Мета карты */}
+          {/* Map metadata */}
           {data.map && (
             <div className="flex items-start gap-2 text-muted" style={{ fontSize: 11.5 }}>
               <Info size={14} style={{ marginTop: 1, flexShrink: 0 }} />
               <span>
-                Окно регистрации {data.window?.regFrom}…{data.window?.regTo}, заказы {data.window?.orderFrom}…{data.window?.orderTo}.
-                Карта AF за {data.map.from}…{data.map.to}, {nf.format(data.map.size)} пользователей.
-                {data.map.truncated && " ⚠ Упёрлись в лимит строк AF – карта неполная, сузьте окно."}
-                {data.map.errors.length > 0 && ` Ошибки AF: ${data.map.errors.join("; ")}`}
+                Sign-up window {data.window?.regFrom}…{data.window?.regTo}, orders {data.window?.orderFrom}…{data.window?.orderTo}.
+                AF map for {data.map.from}…{data.map.to}, {nf.format(data.map.size)} users.
+                {data.map.truncated && " ⚠ Hit the AF row limit, the map is incomplete. Narrow the window."}
+                {data.map.errors.length > 0 && ` AF errors: ${data.map.errors.join("; ")}`}
               </span>
             </div>
           )}
@@ -219,7 +219,7 @@ function Kpi({ title, value, sub, accent }: { title: string; value: string; sub?
 
 function ddmm(d: string): string {
   const p = String(d).split("-");
-  return p.length === 3 ? `${p[2]}.${p[1]}` : String(d);
+  return p.length === 3 ? `${["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][Number(p[1]) - 1]} ${Number(p[2])}` : String(d);
 }
 function DailyChart({ series }: { series: DailySeries }) {
   return (
@@ -233,18 +233,18 @@ function DailyChart({ series }: { series: DailySeries }) {
           <YAxis yAxisId="spend" orientation="right" tick={{ fontSize: 10, fill: "var(--muted)" }} width={46} tickFormatter={(v: number) => "$" + v} />
           <Tooltip
             labelFormatter={(l) => ddmm(String(l))}
-            formatter={(value, name) => [name === "Расход" ? "$" + Math.round(Number(value)) : nf.format(Number(value)), name] as [string, string]}
+            formatter={(value, name) => [name === "Spend" ? "$" + Math.round(Number(value)) : nf.format(Number(value)), name] as [string, string]}
             contentStyle={{ fontSize: 12, background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 8 }}
           />
-          <Line yAxisId="reg" type="monotone" dataKey="registrations" name="Реги" stroke="var(--accent)" strokeWidth={2} dot={false} />
-          <Line yAxisId="spend" type="monotone" dataKey="spend" name="Расход" stroke="#f59e0b" strokeWidth={2} dot={false} />
+          <Line yAxisId="reg" type="monotone" dataKey="registrations" name="Sign-ups" stroke="var(--accent)" strokeWidth={2} dot={false} />
+          <Line yAxisId="spend" type="monotone" dataKey="spend" name="Spend" stroke="#f59e0b" strokeWidth={2} dot={false} />
         </LineChart>
       </ResponsiveContainer>
     </div>
   );
 }
 
-function GroupTable({ rows, revLabel, highlightTotalKey, showSpend, nameCol = "Группа" }: {
+function GroupTable({ rows, revLabel, highlightTotalKey, showSpend, nameCol = "Group" }: {
   rows: Grp[]; revLabel: string; highlightTotalKey?: string; showSpend?: boolean; nameCol?: string;
 }) {
   return (
@@ -253,14 +253,14 @@ function GroupTable({ rows, revLabel, highlightTotalKey, showSpend, nameCol = "�
         <thead>
           <tr className="text-muted" style={{ textAlign: "right" }}>
             <th style={{ fontWeight: 500, textAlign: "left", paddingBottom: 6 }}>{nameCol}</th>
-            <th style={{ fontWeight: 500 }}>Регистрации</th>
-            <th style={{ fontWeight: 500 }}>Покупатели</th>
+            <th style={{ fontWeight: 500 }}>Sign-ups</th>
+            <th style={{ fontWeight: 500 }}>Buyers</th>
             <th style={{ fontWeight: 500 }}>CR</th>
-            <th style={{ fontWeight: 500 }}>Заказы</th>
+            <th style={{ fontWeight: 500 }}>Orders</th>
             <th style={{ fontWeight: 500 }}>{revLabel}</th>
-            <th style={{ fontWeight: 500 }}>Ср. чек</th>
-            <th style={{ fontWeight: 500 }}>Вес, кг</th>
-            {showSpend && <th style={{ fontWeight: 500 }}>Расход</th>}
+            <th style={{ fontWeight: 500 }}>Avg check</th>
+            <th style={{ fontWeight: 500 }}>Weight, kg</th>
+            {showSpend && <th style={{ fontWeight: 500 }}>Spend</th>}
             {showSpend && <th style={{ fontWeight: 500 }}>CAC</th>}
             {showSpend && <th style={{ fontWeight: 500 }}>ROAS</th>}
           </tr>
@@ -276,8 +276,8 @@ function GroupTable({ rows, revLabel, highlightTotalKey, showSpend, nameCol = "�
                 <td style={{ color: bold ? undefined : "var(--accent)" }}>{pct(g.cr)}</td>
                 <td>{nf.format(g.orders)}</td>
                 <td>{money(g.revenue)}</td>
-                <td>${g.avgCheck.toLocaleString("ru-RU", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                <td>{g.weight.toLocaleString("ru-RU", { maximumFractionDigits: 2 })}</td>
+                <td>${g.avgCheck.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                <td>{g.weight.toLocaleString("en-US", { maximumFractionDigits: 2 })}</td>
                 {showSpend && <td>{g.spend ? money(g.spend) : "–"}</td>}
                 {showSpend && <td>{g.cac ? "$" + g.cac.toFixed(2) : "–"}</td>}
                 {showSpend && <td style={{ color: g.roas ? (g.roas >= 1 ? "var(--accent)" : "var(--neg)") : undefined }}>{g.roas ? pct(g.roas * 100) : "–"}</td>}

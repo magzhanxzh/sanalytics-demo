@@ -20,8 +20,8 @@ export async function OverviewData({ filters: raw }: { filters: CardFilters }) {
         <div className="border border-line bg-surface rounded-xl" style={{ padding: 22 }}>
           <p className="text-muted" style={{ fontSize: 13 }}>
             {data.error
-              ? "Не удалось посчитать срез. Попробуйте «Обновить»."
-              : "Источник данных не настроен."}
+              ? "Could not compute this slice. Try Refresh."
+              : "Data source is not configured."}
           </p>
         </div>
       </div>
@@ -46,8 +46,8 @@ export async function OverviewData({ filters: raw }: { filters: CardFilters }) {
         <div className="border border-line bg-surface rounded-xl" style={{ padding: "18px 18px 14px" }}>
           <div className="flex items-center justify-between" style={{ marginBottom: 12 }}>
             <div>
-              <h2 className="font-semibold" style={{ fontSize: 14.5 }}>Динамика</h2>
-              <span className="text-muted" style={{ fontSize: 12 }}>{filters.from && filters.to ? formatRange(filters.from, filters.to) : "последние 30 дней"}</span>
+              <h2 className="font-semibold" style={{ fontSize: 14.5 }}>Trend</h2>
+              <span className="text-muted" style={{ fontSize: 12 }}>{filters.from && filters.to ? formatRange(filters.from, filters.to) : "last 30 days"}</span>
             </div>
             <GranularityToggle filters={filters} />
           </div>
@@ -57,7 +57,7 @@ export async function OverviewData({ filters: raw }: { filters: CardFilters }) {
       </div>
 
       <div className="grid gap-4" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(420px, 1fr))" }}>
-        {/* Каналы привлечения – реальные данные из подключённых кабинетов, стримятся отдельно (тяжёлый AF-запрос) */}
+        {/* Acquisition channels: real data from connected ad accounts, streamed separately (heavy AF query) */}
         <Suspense fallback={<AcquisitionChannelsSkeleton />}>
           <AcquisitionChannels filters={filters} />
         </Suspense>

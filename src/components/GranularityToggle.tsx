@@ -5,9 +5,9 @@ import { useTransition } from "react";
 import type { CardFilters, Grain } from "@/lib/queries/cards";
 
 const OPTS: { value: Grain; label: string }[] = [
-  { value: "day", label: "дни" },
-  { value: "week", label: "недели" },
-  { value: "month", label: "месяцы" },
+  { value: "day", label: "days" },
+  { value: "week", label: "weeks" },
+  { value: "month", label: "months" },
 ];
 
 export function GranularityToggle({ filters }: { filters: CardFilters }) {

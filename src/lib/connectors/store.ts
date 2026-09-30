@@ -2,7 +2,7 @@ import "server-only";
 import { CONNECTORS, specOf, type ConnectorConfig, type ConnectorId, type ConnectorView } from "./types";
 import { memStore } from "@/lib/demo/memstore";
 
-// Сервисные коннекторы (уведомления). В демо: память процесса, Telegram заведён заранее.
+// Service connectors (notifications). In the demo: process memory, Telegram is pre-configured.
 type Store = Record<string, ConnectorConfig>;
 const connectors = memStore<Store>("connectors", () => ({
   telegram: { id: "telegram", enabled: true, fields: { bot_token: "demo", chat_id: "@sanalytics_demo" } },
@@ -20,10 +20,10 @@ export async function getConnector(id: ConnectorId): Promise<ConnectorConfig> {
   return all[id] ?? { id, enabled: false, fields: {} };
 }
 
-// Сохранить. Секреты: пустое значение = «оставить как было» (не затираем).
+// Save. Secrets: an empty value means "keep as is" (not overwritten).
 export async function saveConnector(id: ConnectorId, patch: { enabled?: boolean; fields?: Record<string, string> }): Promise<ConnectorConfig> {
   const spec = specOf(id);
-  if (!spec) throw new Error("Неизвестный коннектор: " + id);
+  if (!spec) throw new Error("Unknown connector: " + id);
   const all = await readAll();
   const cur = all[id] ?? { id, enabled: false, fields: {} as Record<string, string> };
   const fields = { ...cur.fields };
@@ -31,7 +31,7 @@ export async function saveConnector(id: ConnectorId, patch: { enabled?: boolean;
     for (const f of spec.fields) {
       const incoming = patch.fields[f.key];
       if (incoming === undefined) continue;
-      if (f.secret && incoming === "") continue; // пустой секрет -> не менять
+      if (f.secret && incoming === "") continue; // empty secret -> keep
       fields[f.key] = incoming.trim();
     }
   }

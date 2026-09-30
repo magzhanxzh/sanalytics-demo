@@ -6,7 +6,7 @@ import { getAfConfig } from "./store";
 import { getDailyAfMap, refreshDailyAfMap, type AfGroup, type RegMap, type RegMapMeta } from "./regmap";
 import { getSpendRows, syncAdSpend } from "@/lib/connectors/spend";
 
-// Троттлинг синка расхода: не дёргаем API кабинетов чаще раза в 5 мин на одно окно.
+// Spend sync throttling: don't hit ad account APIs more than once per 5 min per window.
 const lastSpendSync = new Map<string, number>();
 const SPEND_SYNC_TTL = 5 * 60 * 1000;
 
@@ -25,10 +25,10 @@ export type AfGroupResult = {
   revenue: number;
   weight: number;
   avgCheck: number;
-  spend?: number;   // расход из рекламного кабинета (если канал подключён)
-  cac?: number;     // расход / покупатели
-  cpr?: number;     // расход / регистрации
-  roas?: number;    // выручка / расход (доля)
+  spend?: number;   // spend from the ad account (if the channel is connected)
+  cac?: number;     // spend / buyers
+  cpr?: number;     // spend / sign-ups
+  roas?: number;    // revenue / spend (ratio)
 };
 
 export type AfAnalysis = {
@@ -40,10 +40,10 @@ export type AfAnalysis = {
   groups: AfGroupResult[];
   targetChannels: AfGroupResult[];
   targetCampaigns: AfGroupResult[];
-  hasSpend?: boolean;          // есть ли расход по каналам за окно
-  hasCampaignSpend?: boolean;  // есть ли расход по кампаниям за окно
-  spendAttributed?: boolean;   // выбрана страна -> расход распределён пропорционально по ней
-  channelDaily?: AfDailySeries[]; // расход+регистрации по дням для кабинетов (с расходом)
+  hasSpend?: boolean;          // whether there is channel spend in the window
+  hasCampaignSpend?: boolean;  // whether there is campaign spend in the window
+  spendAttributed?: boolean;   // a country is selected -> spend is allocated to it proportionally
+  channelDaily?: AfDailySeries[]; // daily spend + sign-ups for ad accounts (with spend)
   totals?: AfGroupResult;
 };
 
@@ -51,10 +51,10 @@ export type AfDailyPoint = { date: string; spend: number; registrations: number 
 export type AfDailySeries = { channel: string; points: AfDailyPoint[] };
 
 const GROUP_LABEL: Record<string, string> = {
-  target: "Таргет",
-  organic: "Органика",
-  restricted: "Ограниченные (iOS без ATT)",
-  no_af: "Нет данных AF",
+  target: "Paid",
+  organic: "Organic",
+  restricted: "Restricted (iOS without ATT)",
+  no_af: "No AF data",
 };
 
 type Acc = { registrations: number; buyers: number; orders: number; revenue: number; weight: number };
@@ -72,7 +72,7 @@ function finalize(key: string, label: string, a: Acc): AfGroupResult {
   };
 }
 
-// Окна из фильтров: регистрация (когорта или период заказа) и заказ.
+// Windows from filters: sign-up (cohort or order period) and order.
 function windows(f: CardFilters) {
   const now = new Date();
   const oFromStr = f.from || fmt(shiftDays(now, -30));
@@ -85,14 +85,14 @@ function windows(f: CardFilters) {
   return { orderFrom, orderToExcl, regFrom: reg.from, regToExcl: reg.toExcl };
 }
 
-// bypassCache – пересчитать анализ (CH + расход), rebuildMap – ещё и пересобрать карту AF.
+// bypassCache recomputes the analysis (CH + spend), rebuildMap also rebuilds the AF map.
 export async function buildAfAnalysis(
   f: CardFilters,
   opts: { bypassCache?: boolean; rebuildMap?: boolean; syncSpend?: boolean } = {},
 ): Promise<AfAnalysis> {
   const cfg = await getAfConfig();
   const afConfigured = Boolean(cfg.token && cfg.apps.filter((a) => a.id).length > 0);
-  const chConfigured = true; // источник фактов (в демо синтетическое хранилище) всегда доступен
+  const chConfigured = true; // the fact source (a synthetic store in the demo) is always available
   if (!afConfigured || !chConfigured) {
     return { afConfigured, chConfigured, groups: [], targetChannels: [], targetCampaigns: [] };
   }
@@ -108,30 +108,30 @@ export async function buildAfAnalysis(
   const win = { regFrom: fmt(w.regFrom), regTo: fmt(w.regToExcl), orderFrom: fmt(w.orderFrom), orderTo: fmt(w.orderToExcl) };
 
   try {
-    // 1) Суточная карта user_id->канал из AF (последние 90 дней). Строится раз в утро;
-    // rebuildMap (кнопка «Обновить карту AF») пересобирает немедленно.
+    // 1) Daily user_id->channel map from AF (last 90 days). Built every morning;
+    // rebuildMap (the "Refresh AF map" button) rebuilds it right away.
     if (opts.rebuildMap) await refreshDailyAfMap();
     const daily = await getDailyAfMap();
     const map: RegMap = daily?.map ?? {};
     const mapMeta: RegMapMeta = daily?.meta ?? {
       at: "", from: "", to: "", appsSig: "", size: 0, truncated: false,
-      errors: ["Карта AppsFlyer ещё не загружена. Она обновляется каждое утро; нажмите «Обновить карту AF» для немедленной загрузки."],
+      errors: ["The AppsFlyer map is not loaded yet. It refreshes every morning; click \"Refresh AF map\" to load it now."],
     };
 
-    // 2) Пер-пользовательские факты когорты из хранилища (в продакшене SQL к DWH).
+    // 2) Per-user cohort facts from the store (SQL against the DWH in production).
     const rows = queryCohortByUser(f.userCreator, dayOf(win.regFrom), dayOf(win.regTo), {
       from: dayOf(win.orderFrom), toExcl: dayOf(win.orderTo), orderChannel: f.orderCreator, excludeB2b: f.excludeB2b,
     });
 
-    // 3) Стыковка и агрегация. Отображаем выбранную страну (или все), но параллельно
-    // считаем регистрации target по каналу/кампании ПО ВСЕМ странам – это знаменатель
-    // для честного распределения расхода кабинета по странам.
+    // 3) Join and aggregate. We display the selected country (or all), but in parallel
+    // count paid sign-ups by channel and campaign ACROSS ALL countries; that is the denominator
+    // for a fair split of ad account spend across countries.
     const groups = new Map<string, Acc>();
     const channels = new Map<string, Acc>();
     const campaigns = new Map<string, Acc>();
     const channelAllRegs = new Map<string, number>();
     const campaignAllRegs = new Map<string, number>();
-    const dailyRegByCh = new Map<string, Map<string, number>>(); // канал -> дата рег -> кол-во (display)
+    const dailyRegByCh = new Map<string, Map<string, number>>(); // channel -> sign-up date -> count (display)
     const total = emptyAcc();
     let matched = 0;
     const paid = f.basis === "paid";
@@ -140,15 +140,15 @@ export async function buildAfAnalysis(
     for (const r of rows) {
       const entry = map[r.user_id];
 
-      // знаменатель (все страны): target-регистрации по каналу и кампании
+      // denominator (all countries): paid sign-ups by channel and campaign
       if (entry && entry.group === "target") {
-        const ck = entry.channel || "(не указан)";
+        const ck = entry.channel || "(not set)";
         channelAllRegs.set(ck, (channelAllRegs.get(ck) ?? 0) + 1);
-        const camp = entry.campaign || "(без кампании)";
+        const camp = entry.campaign || "(no campaign)";
         campaignAllRegs.set(camp, (campaignAllRegs.get(camp) ?? 0) + 1);
       }
 
-      // отображение: только выбранная страна (гео-ограничение соблюдается)
+      // display: only the selected country (geo restriction is respected)
       if (!isAll && (r.country || "") !== f.country) continue;
 
       const orders = num(r.orders);
@@ -164,16 +164,16 @@ export async function buildAfAnalysis(
       total.registrations += 1; total.buyers += isBuyer; total.orders += orders; total.revenue += revenue; total.weight += weight;
 
       if (entry && entry.group === "target") {
-        const ck = entry.channel || "(не указан)";
+        const ck = entry.channel || "(not set)";
         const c = channels.get(ck) ?? emptyAcc();
         c.registrations += 1; c.buyers += isBuyer; c.orders += orders; c.revenue += revenue; c.weight += weight;
         channels.set(ck, c);
-        const camp = entry.campaign || "(без кампании)";
+        const camp = entry.campaign || "(no campaign)";
         const cm = campaigns.get(camp) ?? emptyAcc();
         cm.registrations += 1; cm.buyers += isBuyer; cm.orders += orders; cm.revenue += revenue; cm.weight += weight;
         campaigns.set(camp, cm);
 
-        // регистрации по дням для канала (день = дата регистрации)
+        // daily sign-ups for the channel (day = sign-up date)
         const rd = String(r.reg_day).slice(0, 10);
         let dm = dailyRegByCh.get(ck); if (!dm) { dm = new Map(); dailyRegByCh.set(ck, dm); }
         dm.set(rd, (dm.get(rd) ?? 0) + 1);
@@ -185,22 +185,22 @@ export async function buildAfAnalysis(
     for (const k of order) if (groups.has(k)) groupResults.push(finalize(k, GROUP_LABEL[k], groups.get(k)!));
     if (groups.has("no_af")) groupResults.push(finalize("no_af", GROUP_LABEL.no_af, groups.get("no_af")!));
 
-    // 4) Расход из кабинетов за окно регистрации, РАСПРЕДЕЛЁННЫЙ по стране пропорционально
-    // доле регистраций канала/кампании в этой стране (расход аккаунта общий, делим честно;
-    // сумма по всем странам = полному расходу). Так расход виден и маркетологу одной страны.
+    // 4) Ad account spend for the sign-up window, ALLOCATED to the country in proportion
+    // to the channel/campaign share of sign-ups there (account spend is shared, split fairly;
+    // the sum over all countries equals total spend). This way a single-country marketer sees spend too.
     const regFromInc = win.regFrom;
     const regToInc = fmt(shiftDays(w.regToExcl, -1));
     if (opts.syncSpend) {
       const wkey = `${regFromInc}_${regToInc}`;
       if (opts.rebuildMap || Date.now() - (lastSpendSync.get(wkey) ?? 0) > SPEND_SYNC_TTL) {
-        try { await syncAdSpend(regFromInc, regToInc); lastSpendSync.set(wkey, Date.now()); } catch { /* расход останется как был */ }
+        try { await syncAdSpend(regFromInc, regToInc); lastSpendSync.set(wkey, Date.now()); } catch { /* spend stays as it was */ }
       }
     }
-    // Строки расхода за окно. У Meta есть страна показа (row.country) – тогда привязываем
-    // расход к стране НАПРЯМУЮ (точно). У кабинетов без страны – распределяем пропорционально
-    // доле регистраций канала в стране (fallback).
+    // Spend rows for the window. Meta has a delivery country (row.country), so spend is tied
+    // to the country DIRECTLY (exact). Accounts without a country are allocated in proportion
+    // to the channel's sign-up share in the country (fallback).
     const spendRows = await getSpendRows(regFromInc, regToInc);
-    // ключ -> {byCountry: Map<country,spend>, noCountry: spend}
+    // key -> {byCountry: Map<country,spend>, noCountry: spend}
     type SpendAgg = { byCountry: Map<string, number>; noCountry: number };
     const chSpend = new Map<string, SpendAgg>();
     const campSpend = new Map<string, SpendAgg>();
@@ -218,7 +218,7 @@ export async function buildAfAnalysis(
     const hasCampaignSpend = spendRows.some((s) => s.campaign && s.spend > 0);
     const spendAttributed = !isAll;
 
-    // Итоговый расход строки: точный (по стране показа) + пропорциональный (для кабинетов без страны).
+    // Final row spend: exact (by delivery country) + proportional (for accounts without a country).
     const spendFor = (agg: SpendAgg | undefined, dispRegs: number, allRegs: number): number => {
       if (!agg) return 0;
       const exact = isAll
@@ -246,8 +246,8 @@ export async function buildAfAnalysis(
       .sort((a, b) => b.registrations - a.registrations)
       .slice(0, 40);
 
-    // Расход по дням для кабинетов (канал -> дата -> расход) для отображаемого среза.
-    // Для страны берём строки той же страны (точная привязка); без страны – только на «Все».
+    // Daily spend for ad accounts (channel -> date -> spend) for the displayed slice.
+    // For a country take rows of that country (exact); rows without a country only for "All".
     const dailySpendByCh = new Map<string, Map<string, number>>();
     for (const s of spendRows) {
       if (!s.channel || !s.spend) continue;
@@ -255,7 +255,7 @@ export async function buildAfAnalysis(
       let m = dailySpendByCh.get(s.channel); if (!m) { m = new Map(); dailySpendByCh.set(s.channel, m); }
       m.set(s.date, (m.get(s.date) ?? 0) + s.spend);
     }
-    // Кабинеты = каналы, по которым есть расход. Ось дат – окно регистрации.
+    // Ad accounts = channels with spend. The date axis is the sign-up window.
     const dates: string[] = [];
     for (let d = w.regFrom; d < w.regToExcl; d = shiftDays(d, 1)) dates.push(fmt(d));
     const channelDaily = [...dailySpendByCh.keys()].map((ch) => ({
@@ -284,7 +284,7 @@ export async function buildAfAnalysis(
       hasCampaignSpend,
       spendAttributed,
       channelDaily,
-      totals: finalize("total", "Итого", total),
+      totals: finalize("total", "Total", total),
     };
     cacheSet(key, result);
     return result;

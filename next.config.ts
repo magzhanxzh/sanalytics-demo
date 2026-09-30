@@ -1,9 +1,9 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // не генерировать AGENTS.md / CLAUDE.md при next dev
+  // do not generate AGENTS.md / CLAUDE.md on next dev
   agentRules: false,
-  // без плавающей кнопки dev-оверлея (мешает скриншотам)
+  // no floating dev overlay button (gets in the way of screenshots)
   devIndicators: false,
 };
 

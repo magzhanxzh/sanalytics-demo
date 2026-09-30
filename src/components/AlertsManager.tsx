@@ -24,8 +24,8 @@ export function AlertsManager() {
       const d = await fetch("/api/alerts/run", { method: "POST" }).then((x) => x.json());
       if (d.error) setRunMsg(d.error);
       else {
-        const parts = [`проверено ${d.checked}`, `сработало ${d.fired}`, `отправлено ${d.sent}`];
-        if (d.skipped?.length) parts.push(`пропущено: ${d.skipped.join("; ")}`);
+        const parts = [`checked ${d.checked}`, `fired ${d.fired}`, `sent ${d.sent}`];
+        if (d.skipped?.length) parts.push(`skipped: ${d.skipped.join("; ")}`);
         setRunMsg(parts.join(" · "));
       }
     } catch (e) { setRunMsg(String(e).slice(0, 140)); }
@@ -53,7 +53,7 @@ export function AlertsManager() {
     check();
   }
   async function remove(rule: AlertRule) {
-    if (!window.confirm(`Удалить правило «${rule.name}»?`)) return;
+    if (!window.confirm(`Delete rule "${rule.name}"?`)) return;
     await fetch(`/api/alerts/${rule.id}`, { method: "DELETE" });
     load();
   }
@@ -63,35 +63,35 @@ export function AlertsManager() {
 
   return (
     <div className="grid" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: 18, alignItems: "start" }}>
-      {/* Правила */}
+      {/* Rules */}
       <div className="border border-line bg-surface rounded-xl overflow-hidden">
         <div className="flex items-center justify-between border-b border-line" style={{ padding: "14px 18px" }}>
-          <h2 className="font-semibold" style={{ fontSize: 14.5 }}>Правила</h2>
+          <h2 className="font-semibold" style={{ fontSize: 14.5 }}>Rules</h2>
           <div className="flex items-center gap-2">
             <button onClick={check} disabled={checking} className="flex items-center gap-1.5 border border-line hover:border-line-2 disabled:opacity-60" style={{ borderRadius: 7, padding: "6px 10px", fontSize: 12 }}>
-              <RefreshCw size={13} className={checking ? "animate-spin" : ""} /> Проверить
+              <RefreshCw size={13} className={checking ? "animate-spin" : ""} /> Check
             </button>
-            <button onClick={sendNow} disabled={sending} title="Оценить правила и отправить сработавшие в Telegram" className="flex items-center gap-1.5 border border-line hover:border-line-2 disabled:opacity-60" style={{ borderRadius: 7, padding: "6px 10px", fontSize: 12 }}>
-              <Send size={13} className={sending ? "animate-pulse" : ""} /> Отправить
+            <button onClick={sendNow} disabled={sending} title="Evaluate the rules and send the fired ones to Telegram" className="flex items-center gap-1.5 border border-line hover:border-line-2 disabled:opacity-60" style={{ borderRadius: 7, padding: "6px 10px", fontSize: 12 }}>
+              <Send size={13} className={sending ? "animate-pulse" : ""} /> Send
             </button>
             <button onClick={() => setEditing(newAlertRule())} className="flex items-center gap-1 text-[color:var(--accent-ink)]" style={{ background: "var(--accent)", borderRadius: 7, padding: "6px 10px", fontSize: 12, fontWeight: 500 }}>
-              <Plus size={13} /> Правило
+              <Plus size={13} /> Rule
             </button>
           </div>
         </div>
         {runMsg && <div className="text-muted border-b border-line" style={{ padding: "8px 18px", fontSize: 11.5 }}>{runMsg}</div>}
-        {rules.length === 0 && <div className="text-muted" style={{ padding: "24px 18px", fontSize: 13 }}>Правил пока нет. Создайте первое.</div>}
+        {rules.length === 0 && <div className="text-muted" style={{ padding: "24px 18px", fontSize: 13 }}>No rules yet. Create the first one.</div>}
         {rules.map((r) => {
           const st = status[r.id];
           const color = !r.enabled ? "var(--muted)" : st?.fired ? "var(--neg)" : "var(--pos)";
-          const statusText = !r.enabled ? "выключено" : st ? (st.fired ? "сработало" : "ок") : "…";
+          const statusText = !r.enabled ? "off" : st ? (st.fired ? "fired" : "ok") : "…";
           return (
             <div key={r.id} className="flex gap-3.5 border-b border-line last:border-0" style={{ padding: "14px 18px" }}>
               <span style={{ width: 7, height: 7, borderRadius: 99, background: color, marginTop: 6, flexShrink: 0 }} />
               <div className="flex-1 min-w-0">
                 <div style={{ fontSize: 13.5, fontWeight: 500 }}>{r.name}</div>
                 <div className="mono text-muted" style={{ fontSize: 12, marginTop: 2 }}>
-                  {METRIC_LABELS[r.metric]} {OP_LABELS[r.operator]} {r.threshold.toLocaleString("ru-RU")} · {r.windowDays} дн · {countryLabel(r.country)}
+                  {METRIC_LABELS[r.metric]} {OP_LABELS[r.operator]} {r.threshold.toLocaleString("en-US")} · {r.windowDays} d · {countryLabel(r.country)}
                 </div>
               </div>
               <div className="text-right shrink-0">
@@ -101,7 +101,7 @@ export function AlertsManager() {
                 </div>
               </div>
               <div className="flex items-start gap-0.5 shrink-0">
-                <button onClick={() => toggle(r)} className="text-muted hover:text-ink p-1" title={r.enabled ? "Выключить" : "Включить"}>
+                <button onClick={() => toggle(r)} className="text-muted hover:text-ink p-1" title={r.enabled ? "Turn off" : "Turn on"}>
                   <span style={{ fontSize: 11 }}>{r.enabled ? "◉" : "○"}</span>
                 </button>
                 <button onClick={() => setEditing(r)} className="text-muted hover:text-ink p-1"><Pencil size={13} /></button>
@@ -112,23 +112,23 @@ export function AlertsManager() {
         })}
       </div>
 
-      {/* Сработавшие сейчас */}
+      {/* Firing now */}
       <div className="border border-line bg-surface rounded-xl" style={{ padding: "4px 18px 14px" }}>
-        <h2 className="font-semibold" style={{ fontSize: 14.5, padding: "14px 0 4px" }}>Сработали бы сейчас</h2>
+        <h2 className="font-semibold" style={{ fontSize: 14.5, padding: "14px 0 4px" }}>Would fire now</h2>
         {rules.filter((r) => r.enabled && status[r.id]?.fired).length === 0 ? (
-          <div className="text-muted" style={{ fontSize: 12.5, padding: "6px 0" }}>Сейчас ничего не сработало – все метрики в норме.</div>
+          <div className="text-muted" style={{ fontSize: 12.5, padding: "6px 0" }}>Nothing fires right now, all metrics are within range.</div>
         ) : (
           rules.filter((r) => r.enabled && status[r.id]?.fired).map((r) => (
             <div key={r.id} style={{ padding: "11px 0", borderTop: "1px solid var(--line)" }}>
               <div style={{ fontSize: 12.5, fontWeight: 500 }}>{r.name}</div>
               <p className="text-ink-2" style={{ fontSize: 12.5, marginTop: 2 }}>
-                {METRIC_LABELS[r.metric]} = {formatMetricValue(r.metric, status[r.id].value)} ({OP_LABELS[r.operator]} {r.threshold.toLocaleString("ru-RU")})
+                {METRIC_LABELS[r.metric]} = {formatMetricValue(r.metric, status[r.id].value)} ({OP_LABELS[r.operator]} {r.threshold.toLocaleString("en-US")})
               </p>
             </div>
           ))
         )}
         <p className="text-muted" style={{ fontSize: 11.5, marginTop: 12 }}>
-          Проверка на живых данных за окно правила. Доставка в Telegram/Почту подключится позже.
+          Checked against live data for the rule window. Delivery to Telegram and email is connected in Integrations.
         </p>
       </div>
 
@@ -147,40 +147,40 @@ function AlertEditor({ initial, onSave, onClose }: { initial: AlertRule; onSave:
     <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: "rgba(0,0,0,0.35)" }} onClick={onClose}>
       <div className="bg-surface border border-line rounded-xl w-full" style={{ maxWidth: 480 }} onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between border-b border-line" style={{ padding: "14px 18px" }}>
-          <h2 className="font-semibold" style={{ fontSize: 15 }}>Правило алерта</h2>
+          <h2 className="font-semibold" style={{ fontSize: 15 }}>Alert rule</h2>
           <button onClick={onClose} className="text-muted hover:text-ink"><X size={18} /></button>
         </div>
         <div className="flex flex-col gap-3" style={{ padding: 18 }}>
-          <label className="flex flex-col gap-1"><span className="text-muted" style={{ fontSize: 11.5 }}>Название</span>
+          <label className="flex flex-col gap-1"><span className="text-muted" style={{ fontSize: 11.5 }}>Name</span>
             <input value={r.name} onChange={(e) => set("name", e.target.value)} className={selCls} style={selStyle} />
           </label>
           <div className="grid grid-cols-2 gap-3">
-            <label className="flex flex-col gap-1"><span className="text-muted" style={{ fontSize: 11.5 }}>Метрика</span>
+            <label className="flex flex-col gap-1"><span className="text-muted" style={{ fontSize: 11.5 }}>Metric</span>
               <select value={r.metric} onChange={(e) => set("metric", e.target.value as AlertMetric)} className={selCls} style={selStyle}>
                 {Object.entries(METRIC_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
               </select>
             </label>
-            <label className="flex flex-col gap-1"><span className="text-muted" style={{ fontSize: 11.5 }}>Условие</span>
+            <label className="flex flex-col gap-1"><span className="text-muted" style={{ fontSize: 11.5 }}>Condition</span>
               <select value={r.operator} onChange={(e) => set("operator", e.target.value as AlertOp)} className={selCls} style={selStyle}>
                 {Object.entries(OP_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
               </select>
             </label>
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <label className="flex flex-col gap-1"><span className="text-muted" style={{ fontSize: 11.5 }}>Порог</span>
+            <label className="flex flex-col gap-1"><span className="text-muted" style={{ fontSize: 11.5 }}>Threshold</span>
               <input type="number" value={r.threshold} onChange={(e) => set("threshold", Number(e.target.value))} className={`mono ${selCls}`} style={selStyle} />
             </label>
-            <label className="flex flex-col gap-1"><span className="text-muted" style={{ fontSize: 11.5 }}>Окно, дней</span>
+            <label className="flex flex-col gap-1"><span className="text-muted" style={{ fontSize: 11.5 }}>Window, days</span>
               <input type="number" min={1} max={90} value={r.windowDays} onChange={(e) => set("windowDays", Number(e.target.value))} className={`mono ${selCls}`} style={selStyle} />
             </label>
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <label className="flex flex-col gap-1"><span className="text-muted" style={{ fontSize: 11.5 }}>Страна</span>
+            <label className="flex flex-col gap-1"><span className="text-muted" style={{ fontSize: 11.5 }}>Country</span>
               <select value={r.country} onChange={(e) => set("country", e.target.value)} className={selCls} style={selStyle}>
                 {COUNTRIES.map((c) => <option key={c.code} value={c.code}>{c.label}</option>)}
               </select>
             </label>
-            <label className="flex flex-col gap-1"><span className="text-muted" style={{ fontSize: 11.5 }}>Канал</span>
+            <label className="flex flex-col gap-1"><span className="text-muted" style={{ fontSize: 11.5 }}>Channel</span>
               <select value={r.channel} onChange={(e) => set("channel", e.target.value as AlertChannel)} className={selCls} style={selStyle}>
                 {Object.entries(CHANNEL_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
               </select>
@@ -188,8 +188,8 @@ function AlertEditor({ initial, onSave, onClose }: { initial: AlertRule; onSave:
           </div>
         </div>
         <div className="flex items-center justify-end gap-2 border-t border-line" style={{ padding: "14px 18px" }}>
-          <button onClick={onClose} className="border border-line hover:border-line-2" style={{ borderRadius: 8, padding: "8px 14px", fontSize: 13 }}>Отмена</button>
-          <button onClick={() => onSave(r)} className="text-[color:var(--accent-ink)]" style={{ background: "var(--accent)", borderRadius: 8, padding: "8px 16px", fontSize: 13, fontWeight: 500 }}>Сохранить</button>
+          <button onClick={onClose} className="border border-line hover:border-line-2" style={{ borderRadius: 8, padding: "8px 14px", fontSize: 13 }}>Cancel</button>
+          <button onClick={() => onSave(r)} className="text-[color:var(--accent-ink)]" style={{ background: "var(--accent)", borderRadius: 8, padding: "8px 16px", fontSize: 13, fontWeight: 500 }}>Save</button>
         </div>
       </div>
     </div>

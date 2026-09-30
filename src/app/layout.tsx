@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 
-// Дизайн просит Instrument Sans, но у него нет кириллицы. Inter – тот же
-// нейтральный гротеск с полной поддержкой кириллицы.
+// Inter: a neutral grotesque close to the Instrument Sans in the design,
+// with Cyrillic support for Russian channel and campaign names.
 const instrument = Inter({
   variable: "--font-instrument",
   subsets: ["latin", "cyrillic"],
@@ -18,7 +18,7 @@ const jetbrains = JetBrains_Mono({
 
 export const metadata: Metadata = {
   title: "Sanalytics",
-  description: "Вся аналитика магазина в одном отчёте",
+  description: "All your store analytics in one report",
   icons: {
     icon: [
       { url: "/favicon-light.svg", media: "(prefers-color-scheme: light)" },
@@ -27,12 +27,12 @@ export const metadata: Metadata = {
   },
 };
 
-// Ставит тему до первой отрисовки (localStorage -> prefers-color-scheme).
+// Sets the theme before first paint (localStorage -> prefers-color-scheme).
 const themeInit = `(function(){try{var t=localStorage.getItem('theme');if(!t){t=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';}document.documentElement.setAttribute('data-theme',t);}catch(e){}})();`;
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="ru" suppressHydrationWarning className={`${instrument.variable} ${jetbrains.variable}`}>
+    <html lang="en" suppressHydrationWarning className={`${instrument.variable} ${jetbrains.variable}`}>
       <body>
         <script dangerouslySetInnerHTML={{ __html: themeInit }} />
         {children}

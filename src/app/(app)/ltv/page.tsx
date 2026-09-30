@@ -17,7 +17,7 @@ export default async function LtvPage({
 
   return (
     <>
-      <AppHeader title="LTV" subtitle="Когортная ценность клиента по месяцу регистрации" />
+      <AppHeader title="LTV" subtitle="Customer value by sign-up month cohort" />
       <LtvView country={country} orderCreator={ocreator} userCreator={ucreator} excludeB2b={excludeB2b} />
     </>
   );

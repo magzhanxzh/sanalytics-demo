@@ -1,17 +1,17 @@
 export type Role = "owner" | "admin" | "marketer" | "viewer" | "pending";
 
 export const ROLE_LABELS: Record<Role, string> = {
-  owner: "Владелец",
-  admin: "Администратор",
-  marketer: "Маркетолог",
-  viewer: "Наблюдатель",
-  pending: "Ожидает доступа",
+  owner: "Owner",
+  admin: "Admin",
+  marketer: "Marketer",
+  viewer: "Viewer",
+  pending: "Awaiting access",
 };
 
-// Роли, которые владелец может назначать (себя-владельца не выдаём через UI).
+// Roles the owner can assign (owner itself is not granted through the UI).
 export const ASSIGNABLE_ROLES: Role[] = ["admin", "marketer", "viewer"];
 
-// Ограничены по гео (страны обязательны). owner/admin видят всё.
+// Geo-restricted (countries required). owner/admin see everything.
 export function isGeoRestricted(role: Role): boolean {
   return role === "marketer" || role === "viewer";
 }

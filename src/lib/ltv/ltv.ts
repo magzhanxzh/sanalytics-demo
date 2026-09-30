@@ -2,27 +2,27 @@ import "server-only";
 import { cacheGet, cacheSet, isFresh } from "@/lib/cache";
 import { scanLtv, dayOf } from "@/lib/demo/warehouse";
 
-// КОГОРТНЫЙ LTV.
-//   - база: пользователи страны, ЗАРЕГИСТРИРОВАННЫЕ ВНУТРИ ОКНА отчёта, чтобы у каждого
-//     была полная история с момента регистрации (LTV не обрезан слева);
-//   - канал заказа фильтруется отдельно (по умолчанию собственный магазин);
-//   - B2B (> 50 заказов в каком-либо месяце) по умолчанию исключается;
-//   - два знаменателя LTV, оба накопительные: на регистранта и на покупателя.
-// В продакшене это пять SQL-запросов к ClickHouse (размеры когорт, KPI с медианой и
-// топ-10%, распределение, когорта x месяц жизни, новые покупатели). В демо те же
-// агрегаты считаются одним проходом по синтетическому хранилищу, когортная математика общая.
+// COHORT LTV.
+//   - base: users of the country who SIGNED UP INSIDE the report window, so that everyone
+//     has full history since sign-up (LTV is not truncated on the left);
+//   - order channel is filtered separately (own store by default);
+//   - B2B (> 50 orders in any month) is excluded by default;
+//   - two LTV denominators, both cumulative: per sign-up and per buyer.
+// In production these are five ClickHouse SQL queries (cohort sizes, KPIs with median and
+// top 10%, distribution, cohort x month of life, new buyers). In the demo the same
+// aggregates are computed in one pass over the synthetic store; the cohort math is shared.
 
 export type LtvFilters = { country: string; orderCreator: string; userCreator: string; excludeB2b: boolean };
 
 const WINDOW_START = "2025-01-01";
 
-// Конец окна = первое число текущего месяца (только полные месяцы).
+// Window end = first day of the current month (full months only).
 function windowEnd(): string {
   const d = new Date();
   return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-01`;
 }
 
-/* ------------------------------ Результат ------------------------------ */
+/* ------------------------------ Result ------------------------------ */
 
 export type LtvKpi = {
   totalCustomers: number; payingCustomers: number; payingShare: number;
@@ -41,12 +41,12 @@ export type LtvResult = {
   configured: boolean;
   window?: { start: string; end: string };
   kpi?: LtvKpi;
-  curveReg?: LtvCurvePoint[];       // накопленный LTV на регистранта по месяцам жизни
-  curveBuyer?: LtvCurvePoint[];     // накопленный LTV на покупателя
-  curveCohorts?: string[];          // какие когорты в линиях графика
+  curveReg?: LtvCurvePoint[];       // cumulative LTV per sign-up by month of life
+  curveBuyer?: LtvCurvePoint[];     // cumulative LTV per buyer
+  curveCohorts?: string[];          // which cohorts are in the chart lines
   totals?: CohortTotal[];
   dist?: DistBucket[];
-  matrix?: { mols: number[]; rows: LtvMatrixRow[] };  // треугольник LTV/рег
+  matrix?: { mols: number[]; rows: LtvMatrixRow[] };  // LTV per sign-up triangle
   error?: string;
 };
 
@@ -56,19 +56,19 @@ const ymOf = (monthIdx: number) => `${Math.floor(monthIdx / 12)}-${String((month
 
 export async function buildLtv(f: LtvFilters): Promise<LtvResult> {
   const winEnd = windowEnd();
-  const key = "ltv:" + JSON.stringify(f) + ":" + winEnd; // winEnd в ключ: на стыке месяцев кеш не устареет
+  const key = "ltv:" + JSON.stringify(f) + ":" + winEnd; // winEnd in the key: the cache won't go stale across a month boundary
   const hit = cacheGet<LtvResult>(key);
   if (hit && isFresh(hit.at)) return hit.data;
 
   try {
     const scan = scanLtv(dayOf(WINDOW_START), dayOf(winEnd), { country: f.country, userChannel: f.userCreator }, f.orderCreator, f.excludeB2b);
 
-    // --- размеры когорт ---
+    // --- cohort sizes ---
     const size = new Map<string, number>();
     let totalCustomers = 0;
     for (const [m, n] of [...scan.cohortSize.entries()].sort((a, b) => a[0] - b[0])) { size.set(ymOf(m), n); totalCustomers += n; }
 
-    // --- KPI по покупателям (rev > 0) ---
+    // --- KPIs over buyers (rev > 0) ---
     const revs = scan.perUser.map((u) => u.revenue).sort((a, b) => a - b);
     const paying = revs.length;
     const totalRev = revs.reduce((s, v) => s + v, 0);
@@ -86,8 +86,8 @@ export async function buildLtv(f: LtvFilters): Promise<LtvResult> {
       top10Share: totalRev ? Math.round((1000 * topSum) / totalRev) / 10 : 0,
     };
 
-    // --- распределение по размеру LTV ---
-    const dist: DistBucket[] = [{ bucket: "Без выручки", users: Math.max(totalCustomers - paying, 0), revenue: 0 }];
+    // --- distribution by LTV size ---
+    const dist: DistBucket[] = [{ bucket: "No revenue", users: Math.max(totalCustomers - paying, 0), revenue: 0 }];
     for (const [label] of BUCKETS) dist.push({ bucket: label, users: 0, revenue: 0 });
     for (const v of revs) {
       const i = BUCKETS.findIndex(([, hi]) => v < hi);
@@ -95,7 +95,7 @@ export async function buildLtv(f: LtvFilters): Promise<LtvResult> {
     }
     for (const d of dist) d.revenue = Math.round(d.revenue);
 
-    // --- когортная математика ---
+    // --- cohort math ---
     const revByCohort = new Map<string, Map<number, number>>();
     let maxMol = 0;
     for (const [cm, mols] of scan.cohortMol) {
@@ -106,11 +106,11 @@ export async function buildLtv(f: LtvFilters): Promise<LtvResult> {
     for (const [cm, mols] of scan.firstMol) newBuyers.set(ymOf(cm), mols);
 
     const cohorts = [...size.keys()].sort();
-    // Возраст когорты = сколько месяцев жизни она уже прожила к концу окна.
+    // Cohort age = how many months of life it has lived by the end of the window.
     const ageOf = (c: string) => {
       const [y, mo] = c.split("-").map(Number);
       const [ey, em] = winEnd.split("-").map(Number);
-      return (ey * 12 + (em - 1)) - (y * 12 + (mo - 1)) - 1; // winEnd эксклюзивный
+      return (ey * 12 + (em - 1)) - (y * 12 + (mo - 1)) - 1; // winEnd is exclusive
     };
 
     const totals: CohortTotal[] = [];
@@ -140,7 +140,7 @@ export async function buildLtv(f: LtvFilters): Promise<LtvResult> {
       });
     }
 
-    // --- линии графика: каждая 3-я когорта, максимум 8 ---
+    // --- chart lines: every 3rd cohort, at most 8 ---
     const pick = cohorts.filter((_, i) => i % 3 === 0).slice(0, 8);
     const mkCurve = (byCohort: Map<string, Map<number, number>>): LtvCurvePoint[] => {
       const pts: LtvCurvePoint[] = [];
@@ -155,7 +155,7 @@ export async function buildLtv(f: LtvFilters): Promise<LtvResult> {
       return pts;
     };
 
-    // --- матрица LTV/рег (треугольник), колонки 0..min(maxMol,12) ---
+    // --- LTV per sign-up matrix (triangle), columns 0..min(maxMol,12) ---
     const matMols = Array.from({ length: Math.min(maxMol, 12) + 1 }, (_, i) => i);
     const matrix = {
       mols: matMols,
@@ -175,7 +175,7 @@ export async function buildLtv(f: LtvFilters): Promise<LtvResult> {
       curveReg: mkCurve(ltvRegByCohort),
       curveBuyer: mkCurve(ltvBuyerByCohort),
       curveCohorts: pick,
-      totals: totals.reverse(), // свежие когорты сверху
+      totals: totals.reverse(), // newest cohorts on top
       dist,
       matrix,
     };

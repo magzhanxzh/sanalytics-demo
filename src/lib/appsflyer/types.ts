@@ -1,23 +1,23 @@
-// Интеграция AppsFlyer (MMP). Тянем агрегатный отчёт Pull API v2
-// (partners_by_date_report): медиа-источник x дата -> показы/клики/установки/расход.
-// Токен один на аккаунт, приложений может быть несколько (Android/iOS).
-// Токен и данные хранятся на сервере, в боевое хранилище ничего не пишем.
+// AppsFlyer (MMP) integration. We pull the Pull API v2 aggregate report
+// (partners_by_date_report): media source x date -> impressions/clicks/installs/spend.
+// One token per account, there can be several apps (Android/iOS).
+// The token and data stay on the server; nothing is written to the production warehouse.
 
 export type AfPlatform = "android" | "ios" | "other";
 
 export type AfApp = { id: string; platform: AfPlatform };
 
 export type AfConfig = {
-  token: string;     // Pull API v2 Bearer token (из AF: Security Center)
-  apps: AfApp[];     // одно или несколько приложений (com.example.shop, id123..)
-  timezone: string;  // напр. Asia/Almaty; пусто = дефолт приложения в AF
+  token: string;     // Pull API v2 Bearer token (from AF Security Center)
+  apps: AfApp[];     // one or more apps (com.example.shop, id123..)
+  timezone: string;  // e.g. Asia/Almaty; empty = the app default in AF
 };
 
 export function emptyAfConfig(): AfConfig {
   return { token: "", apps: [], timezone: "" };
 }
 
-// Наружу (в браузер) токен не отдаём.
+// The token is never exposed to the browser.
 export type AfConfigView = {
   configured: boolean;
   apps: AfApp[];
@@ -25,7 +25,7 @@ export type AfConfigView = {
   hasToken: boolean;
 };
 
-// Строка агрегата по медиа-источнику за окно (сумма по всем приложениям).
+// Aggregate row per media source for the window (sum across all apps).
 export type AfSourceRow = {
   mediaSource: string;
   impressions: number;
@@ -34,28 +34,28 @@ export type AfSourceRow = {
   cost: number;
 };
 
-// Итог по одному приложению (для разбивки по платформам).
+// Total for one app (for the platform split).
 export type AfAppTotal = {
   id: string;
   platform: AfPlatform;
   installs: number;
   cost: number;
-  error?: string; // если по этому приложению выгрузка не удалась
+  error?: string; // if the export failed for this app
 };
 
 export type AfSync = {
-  at: string;          // ISO времени синхронизации
-  from: string;        // окно
+  at: string;          // sync time, ISO
+  from: string;        // window
   to: string;
-  rows: AfSourceRow[]; // агрегат по медиа-источникам (все приложения)
-  byApp: AfAppTotal[]; // разбивка по приложениям/платформам
+  rows: AfSourceRow[]; // aggregate by media source (all apps)
+  byApp: AfAppTotal[]; // split by app/platform
   totalInstalls: number;
   totalCost: number;
-  note?: string;       // предупреждения (лимит строк, нет расхода и т.п.)
+  note?: string;       // warnings (row limit, no spend and so on)
 };
 
 export const PLATFORM_LABEL: Record<AfPlatform, string> = {
   android: "Android",
   ios: "iOS",
-  other: "Другое",
+  other: "Other",
 };

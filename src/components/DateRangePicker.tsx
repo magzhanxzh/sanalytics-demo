@@ -16,24 +16,22 @@ function parseYMD(s: string): Date | undefined {
   if (!y || !m || !d) return undefined;
   return new Date(y, m - 1, d);
 }
+const shortDate = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric" });
 function labelShort(d: Date): string {
-  return `${pad(d.getDate())}.${pad(d.getMonth() + 1)}`;
+  return shortDate.format(d);
 }
-function chipLabel(from?: Date, to?: Date, placeholder = "не задан"): string {
+function chipLabel(from?: Date, to?: Date, placeholder = "not set"): string {
   if (!from) return placeholder;
-  if (!to || fmtLocal(from) === fmtLocal(to)) return `${labelShort(from)}.${from.getFullYear()}`;
-  return `${labelShort(from)} – ${labelShort(to)}.${to.getFullYear()}`;
+  if (!to || fmtLocal(from) === fmtLocal(to)) return `${labelShort(from)}, ${from.getFullYear()}`;
+  return `${labelShort(from)} – ${labelShort(to)}, ${to.getFullYear()}`;
 }
 
-// Русские подписи календаря без date-fns
-const ruMonthName = new Intl.DateTimeFormat("ru-RU", { month: "long" });
-const ruWeekday = new Intl.DateTimeFormat("ru-RU", { weekday: "short" });
+// Calendar labels without date-fns
+const monthName = new Intl.DateTimeFormat("en-US", { month: "long" });
+const weekday = new Intl.DateTimeFormat("en-US", { weekday: "short" });
 const formatters = {
-  formatCaption: (d: Date) => {
-    const m = ruMonthName.format(d);
-    return `${m.charAt(0).toUpperCase()}${m.slice(1)} ${d.getFullYear()}`;
-  },
-  formatWeekdayName: (d: Date) => ruWeekday.format(d).replace(".", ""),
+  formatCaption: (d: Date) => `${monthName.format(d)} ${d.getFullYear()}`,
+  formatWeekdayName: (d: Date) => weekday.format(d).slice(0, 2),
 };
 
 type Preset = { label: string; range: () => DateRange };
@@ -46,7 +44,7 @@ function buildPresets(): Preset[] {
     x.setDate(x.getDate() + days);
     return x;
   };
-  const startOfWeek = (base: Date) => d(base, -((base.getDay() + 6) % 7)); // понедельник
+  const startOfWeek = (base: Date) => d(base, -((base.getDay() + 6) % 7)); // Monday
   const startOfMonth = (base: Date) => new Date(base.getFullYear(), base.getMonth(), 1);
   const prevMonthStart = new Date(today.getFullYear(), today.getMonth() - 1, 1);
   const prevMonthEnd = new Date(today.getFullYear(), today.getMonth(), 0);
@@ -54,14 +52,14 @@ function buildPresets(): Preset[] {
   const prevWeekStart = d(thisWeekStart, -7);
 
   return [
-    { label: "Сегодня", range: () => ({ from: today, to: today }) },
-    { label: "Вчера", range: () => ({ from: d(today, -1), to: d(today, -1) }) },
-    { label: "Последние 7 дней", range: () => ({ from: d(today, -6), to: today }) },
-    { label: "Последние 30 дней", range: () => ({ from: d(today, -29), to: today }) },
-    { label: "Эта неделя", range: () => ({ from: thisWeekStart, to: today }) },
-    { label: "Прошлая неделя", range: () => ({ from: prevWeekStart, to: d(prevWeekStart, 6) }) },
-    { label: "Этот месяц", range: () => ({ from: startOfMonth(today), to: today }) },
-    { label: "Прошлый месяц", range: () => ({ from: prevMonthStart, to: prevMonthEnd }) },
+    { label: "Today", range: () => ({ from: today, to: today }) },
+    { label: "Yesterday", range: () => ({ from: d(today, -1), to: d(today, -1) }) },
+    { label: "Last 7 days", range: () => ({ from: d(today, -6), to: today }) },
+    { label: "Last 30 days", range: () => ({ from: d(today, -29), to: today }) },
+    { label: "This week", range: () => ({ from: thisWeekStart, to: today }) },
+    { label: "Last week", range: () => ({ from: prevWeekStart, to: d(prevWeekStart, 6) }) },
+    { label: "This month", range: () => ({ from: startOfMonth(today), to: today }) },
+    { label: "Last month", range: () => ({ from: prevMonthStart, to: prevMonthEnd }) },
   ];
 }
 
@@ -127,7 +125,7 @@ export function DateRangePicker({
           className="absolute z-50 mt-2 flex bg-surface border border-line rounded-xl shadow-lg"
           style={{ boxShadow: "0 8px 30px rgba(0,0,0,0.12)", ...(align === "left" ? { left: 0 } : { right: 0 }) }}
         >
-          {/* Пресеты */}
+          {/* Presets */}
           <div className="flex flex-col gap-0.5 border-r border-line" style={{ padding: 8, minWidth: 150 }}>
             {presets.map((p) => (
               <button
@@ -145,12 +143,12 @@ export function DateRangePicker({
                 className="text-left text-muted hover:text-neg rounded-md transition-colors mt-1"
                 style={{ padding: "7px 9px", fontSize: 12.5 }}
               >
-                Сбросить
+                Reset
               </button>
             )}
           </div>
 
-          {/* Календарь */}
+          {/* Calendar */}
           <div style={{ padding: 12 }} className="rdp-wrap">
             <DayPicker
               mode="range"
@@ -164,10 +162,10 @@ export function DateRangePicker({
             />
             <div className="flex items-center justify-end gap-2 border-t border-line" style={{ paddingTop: 10, marginTop: 4 }}>
               <button onClick={() => setOpen(false)} className="border border-line hover:border-line-2 transition-colors" style={{ borderRadius: 7, padding: "6px 12px", fontSize: 12.5 }}>
-                Отмена
+                Cancel
               </button>
               <button onClick={apply} className="text-[color:var(--accent-ink)]" style={{ background: "var(--accent)", borderRadius: 7, padding: "6px 14px", fontSize: 12.5, fontWeight: 500 }}>
-                Применить
+                Apply
               </button>
             </div>
           </div>

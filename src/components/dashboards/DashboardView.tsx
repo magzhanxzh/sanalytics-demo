@@ -31,7 +31,7 @@ export function DashboardView({ initial }: { initial: Dashboard }) {
   const [ucreators, setUcreators] = useState<string[]>(FALLBACK_USER_CREATORS);
   const access = useAccess();
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  // Редактировать может только владелец. Получатель общего дашборда видит его только для чтения.
+  // Only the owner can edit. Someone a dashboard is shared with sees it read-only.
   const canEdit = dash.owner === CURRENT_USER;
 
   useEffect(() => {
@@ -41,16 +41,16 @@ export function DashboardView({ initial }: { initial: Dashboard }) {
     }).catch(() => {});
   }, []);
 
-  // В продакшене получатель подписан на Supabase Realtime и видит правки владельца сразу.
+  // In production the viewer subscribes to Supabase Realtime and sees the owner's edits right away.
 
-  // Перечитать актуальную версию дашборда.
+  // Reload the latest version of the dashboard.
   async function reloadDash() {
     try {
       const r = await fetch(`/api/dashboards/${dash.id}`).then((x) => x.json());
       if (r.dashboard) setDash({ ...r.dashboard, filters: r.dashboard.filters ?? defaultDashboardFilters(), sharedWith: r.dashboard.sharedWith ?? [] });
-    } catch { /* оставляем текущее */ }
+    } catch { /* keep the current one */ }
   }
-  // «Обновить всё»: перечитать данные виджетов И конфиг дашборда.
+  // "Refresh all": reload widget data AND the dashboard config.
   async function refreshAll() {
     setRefreshKey((k) => k + 1);
     await reloadDash();
@@ -59,7 +59,7 @@ export function DashboardView({ initial }: { initial: Dashboard }) {
   const df = { ...defaultDashboardFilters(), ...(dash.filters ?? {}) };
 
   function persist(next: Dashboard, immediate = false) {
-    if (!canEdit) return; // получатель доступа менять дашборд не может
+    if (!canEdit) return; // a viewer cannot change the dashboard
     setDash(next);
     setSaved(false);
     if (timer.current) clearTimeout(timer.current);
@@ -75,11 +75,11 @@ export function DashboardView({ initial }: { initial: Dashboard }) {
     else timer.current = setTimeout(doSave, 700);
   }
 
-  // Виджет с наследованием фильтров дашборда
+  // Widget with dashboard filter inheritance
   function effective(w: Widget): Widget {
     if (w.inheritFilters === false) return w;
-    // Фильтры дашборда переопределяют виджет. Периоды – только если заданы (иначе «не задан»
-    // = виджет использует свой период). Страна и каналы задаются всегда (у них есть «Все»).
+    // Dashboard filters override the widget. Periods only when set (otherwise "not set"
+    // means the widget uses its own period). Country and channels are always set (they have "All").
     const f = { ...w.filters, country: df.country, orderCreator: df.orderCreator, userCreator: df.userCreator, excludeB2b: df.excludeB2b };
     if (df.from && df.to) { f.from = df.from; f.to = df.to; }
     if (df.regFrom && df.regTo) { f.regFrom = df.regFrom; f.regTo = df.regTo; }
@@ -98,11 +98,11 @@ export function DashboardView({ initial }: { initial: Dashboard }) {
     setEditorOpen(false);
   }
   function duplicateWidget(w: Widget) {
-    const copy: Widget = { ...w, id: "wgt_" + Math.random().toString(36).slice(2, 10), title: w.title + " (копия)", layout: { ...(w.layout ?? defaultLayout(w, 0)), y: bottomY() } };
+    const copy: Widget = { ...w, id: "wgt_" + Math.random().toString(36).slice(2, 10), title: w.title + " (copy)", layout: { ...(w.layout ?? defaultLayout(w, 0)), y: bottomY() } };
     persist({ ...dash, widgets: [...dash.widgets, copy] }, true);
   }
   function removeWidget(w: Widget) {
-    if (!window.confirm(`Удалить виджет «${w.title}»?`)) return;
+    if (!window.confirm(`Delete widget "${w.title}"?`)) return;
     persist({ ...dash, widgets: dash.widgets.filter((x) => x.id !== w.id) }, true);
   }
   function bottomY(): number {
@@ -125,7 +125,7 @@ export function DashboardView({ initial }: { initial: Dashboard }) {
 
   return (
     <div>
-      {/* Шапка дашборда */}
+      {/* Dashboard header */}
       <div className="flex items-center gap-3" style={{ marginBottom: 14 }}>
         <Link href="/dashboards" className="text-muted hover:text-ink"><ArrowLeft size={18} /></Link>
         <input
@@ -138,42 +138,42 @@ export function DashboardView({ initial }: { initial: Dashboard }) {
         />
         {!canEdit && (
           <span className="text-muted flex items-center gap-1.5" style={{ fontSize: 12 }}>
-            только просмотр · от {dash.owner}
+            view only · from {dash.owner}
           </span>
         )}
-        {saved && <span className="text-pos flex items-center gap-1" style={{ fontSize: 12 }}><Check size={14} /> сохранено</span>}
+        {saved && <span className="text-pos flex items-center gap-1" style={{ fontSize: 12 }}><Check size={14} /> saved</span>}
         <button onClick={refreshAll} className="flex items-center gap-2 border border-line hover:border-line-2" style={{ borderRadius: 8, padding: "8px 12px", fontSize: 12.5 }}>
-          <RefreshCw size={14} /> Обновить всё
+          <RefreshCw size={14} /> Refresh all
         </button>
         {canEdit && (
           <button onClick={openNew} className="flex items-center gap-2 text-[color:var(--accent-ink)]" style={{ background: "var(--accent)", borderRadius: 8, padding: "8px 14px", fontSize: 12.5, fontWeight: 500 }}>
-            <Plus size={15} /> Виджет
+            <Plus size={15} /> Widget
           </button>
         )}
       </div>
 
-      {/* Фильтры дашборда */}
+      {/* Dashboard filters */}
       <div className="flex flex-wrap items-center gap-3 border border-line bg-surface rounded-xl" style={{ padding: "10px 14px", marginBottom: 16 }}>
-        <span className="text-muted" style={{ fontSize: 11.5 }}>Фильтры дашборда</span>
+        <span className="text-muted" style={{ fontSize: 11.5 }}>Dashboard filters</span>
         {canEdit ? (
           <>
-            <DateRangePicker label="Период регистрации" months={1} align="left" placeholder="не задан" from={df.regFrom} to={df.regTo} onApply={(from, to) => persist({ ...dash, filters: { ...df, regFrom: from, regTo: to } }, true)} onClear={() => persist({ ...dash, filters: { ...df, regFrom: "", regTo: "" } }, true)} />
-            <DateRangePicker label="Период заказа" months={1} align="left" placeholder="не задан" from={df.from} to={df.to} onApply={(from, to) => persist({ ...dash, filters: { ...df, from, to } }, true)} onClear={() => persist({ ...dash, filters: { ...df, from: "", to: "" } }, true)} />
-            <ChipSelect label="Страна" value={COUNTRIES.find((c) => c.code === df.country)?.label ?? df.country} selectValue={df.country} options={countryOptions(access.allowed)} onChange={(v) => persist({ ...dash, filters: { ...df, country: v } }, true)} />
-            <ChipSelect label="Канал клиента" value={df.userCreator === "all" ? "Все" : df.userCreator} selectValue={df.userCreator} options={[["all", "Все"], ...ucreators.map((c) => [c, c] as [string, string])]} onChange={(v) => persist({ ...dash, filters: { ...df, userCreator: v } }, true)} />
-            <ChipSelect label="Канал заказа" value={df.orderCreator === "all" ? "Все" : df.orderCreator} selectValue={df.orderCreator} options={[["all", "Все"], ...ocreators.map((c) => [c, c] as [string, string])]} onChange={(v) => persist({ ...dash, filters: { ...df, orderCreator: v } }, true)} />
-            <ChipSelect label="B2B" value={df.excludeB2b ? "Искл" : "Вкл"} selectValue={df.excludeB2b ? "exclude" : "include"} options={[["include", "Вкл"], ["exclude", "Искл"]]} onChange={(v) => persist({ ...dash, filters: { ...df, excludeB2b: v === "exclude" } }, true)} />
-            <span className="text-muted" style={{ fontSize: 11.5 }}>применяются к виджетам с наследованием</span>
+            <DateRangePicker label="Sign-up period" months={1} align="left" placeholder="not set" from={df.regFrom} to={df.regTo} onApply={(from, to) => persist({ ...dash, filters: { ...df, regFrom: from, regTo: to } }, true)} onClear={() => persist({ ...dash, filters: { ...df, regFrom: "", regTo: "" } }, true)} />
+            <DateRangePicker label="Order period" months={1} align="left" placeholder="not set" from={df.from} to={df.to} onApply={(from, to) => persist({ ...dash, filters: { ...df, from, to } }, true)} onClear={() => persist({ ...dash, filters: { ...df, from: "", to: "" } }, true)} />
+            <ChipSelect label="Country" value={COUNTRIES.find((c) => c.code === df.country)?.label ?? df.country} selectValue={df.country} options={countryOptions(access.allowed)} onChange={(v) => persist({ ...dash, filters: { ...df, country: v } }, true)} />
+            <ChipSelect label="User channel" value={df.userCreator === "all" ? "All" : df.userCreator} selectValue={df.userCreator} options={[["all", "All"], ...ucreators.map((c) => [c, c] as [string, string])]} onChange={(v) => persist({ ...dash, filters: { ...df, userCreator: v } }, true)} />
+            <ChipSelect label="Order channel" value={df.orderCreator === "all" ? "All" : df.orderCreator} selectValue={df.orderCreator} options={[["all", "All"], ...ocreators.map((c) => [c, c] as [string, string])]} onChange={(v) => persist({ ...dash, filters: { ...df, orderCreator: v } }, true)} />
+            <ChipSelect label="B2B" value={df.excludeB2b ? "Excl" : "Incl"} selectValue={df.excludeB2b ? "exclude" : "include"} options={[["include", "Incl"], ["exclude", "Excl"]]} onChange={(v) => persist({ ...dash, filters: { ...df, excludeB2b: v === "exclude" } }, true)} />
+            <span className="text-muted" style={{ fontSize: 11.5 }}>apply to widgets with inheritance</span>
           </>
         ) : (
           <>
-            <StaticChip label="Период регистрации" value={rangeLabel(df.regFrom, df.regTo)} />
-            <StaticChip label="Период заказа" value={rangeLabel(df.from, df.to)} />
-            <StaticChip label="Страна" value={COUNTRIES.find((c) => c.code === df.country)?.label ?? df.country} />
-            <StaticChip label="Канал клиента" value={df.userCreator === "all" ? "Все" : df.userCreator} />
-            <StaticChip label="Канал заказа" value={df.orderCreator === "all" ? "Все" : df.orderCreator} />
-            <StaticChip label="B2B" value={df.excludeB2b ? "Искл" : "Вкл"} />
-            <span className="text-muted" style={{ fontSize: 11.5 }}>фильтры задаёт владелец</span>
+            <StaticChip label="Sign-up period" value={rangeLabel(df.regFrom, df.regTo)} />
+            <StaticChip label="Order period" value={rangeLabel(df.from, df.to)} />
+            <StaticChip label="Country" value={COUNTRIES.find((c) => c.code === df.country)?.label ?? df.country} />
+            <StaticChip label="User channel" value={df.userCreator === "all" ? "All" : df.userCreator} />
+            <StaticChip label="Order channel" value={df.orderCreator === "all" ? "All" : df.orderCreator} />
+            <StaticChip label="B2B" value={df.excludeB2b ? "Excl" : "Incl"} />
+            <span className="text-muted" style={{ fontSize: 11.5 }}>filters are set by the owner</span>
           </>
         )}
       </div>
@@ -181,8 +181,8 @@ export function DashboardView({ initial }: { initial: Dashboard }) {
       {dash.widgets.length === 0 ? (
         <div className="border border-dashed border-line-2 rounded-xl text-center text-muted" style={{ padding: "60px 20px", fontSize: 13.5 }}>
           {canEdit
-            ? "Пока пусто. Нажмите «Виджет», чтобы добавить график, показатель или заголовок. Виджеты можно перетаскивать и менять размер."
-            : "В этом дашборде пока нет виджетов."}
+            ? "Empty so far. Click \"Widget\" to add a chart, a metric or a heading. Widgets can be dragged and resized."
+            : "This dashboard has no widgets yet."}
         </div>
       ) : (
         <Grid
@@ -211,7 +211,7 @@ export function DashboardView({ initial }: { initial: Dashboard }) {
 }
 
 function rangeLabel(from?: string, to?: string): string {
-  if (!from || !to) return "не задан";
+  if (!from || !to) return "not set";
   return formatRange(from, to);
 }
 function StaticChip({ label, value }: { label: string; value: string }) {

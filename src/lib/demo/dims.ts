@@ -1,38 +1,38 @@
-// Справочники синтетического магазина. Файл без server-only: его читают и
-// клиентские компоненты (выпадашки фильтров).
+// Reference data for the synthetic store. No server-only here: client components
+// (filter dropdowns) read it too.
 
 export const COUNTRY_CODES = ["KZ", "UZ", "KG", "TJ", "MN"] as const;
 export const COUNTRY_WEIGHTS = [0.6, 0.2, 0.11, 0.06, 0.03];
 
-// Канал регистрации пользователя (где создан аккаунт).
+// User sign-up channel (where the account was created).
 export const USER_CHANNELS = ["app", "web", "partner"] as const;
 export const USER_CHANNEL_WEIGHTS = [0.62, 0.27, 0.11];
 
-// Канал заказа (витрина, через которую оформлен заказ).
+// Order channel (the storefront the order was placed through).
 export const ORDER_CHANNELS = ["store", "marketplace_a", "marketplace_b", "express"] as const;
 export const ORDER_CHANNEL_WEIGHTS = [0.55, 0.25, 0.13, 0.07];
-// Медианный чек по каналу, $.
+// Median check by channel, $.
 export const ORDER_CHANNEL_MEDIAN_PRICE = [24, 17, 31, 45];
 
-// Рекламные источники. В сыром отчёте MMP это технические media source id,
-// на экранах показываем человеческие названия площадок.
+// Ad sources. In the raw MMP report these are technical media source ids;
+// the screens show human-readable platform names.
 export const AD_SOURCES = ["Google Ads", "TikTok Ads", "Meta Ads", "Yandex Direct"] as const;
 export type AdSource = (typeof AD_SOURCES)[number];
 
-// Какие источники крутятся в какой стране (там же заведены рекламные кабинеты).
+// Which sources run in which country (ad accounts are set up there too).
 export const SOURCES_BY_COUNTRY: Record<string, { source: number; weight: number }[]> = {
   KZ: [{ source: 0, weight: 0.34 }, { source: 1, weight: 0.3 }, { source: 2, weight: 0.22 }, { source: 3, weight: 0.14 }],
   UZ: [{ source: 0, weight: 0.4 }, { source: 1, weight: 0.35 }, { source: 2, weight: 0.25 }],
   KG: [{ source: 1, weight: 0.55 }, { source: 2, weight: 0.45 }],
 };
 
-// Насколько хорошо источник конвертирует регистрацию в покупку (множитель к базе).
+// How well a source converts sign-ups into purchases (multiplier over the base).
 export const SOURCE_CONV = [0.95, 0.7, 0.45, 0.8];
-// Стоимость регистрации (CPR) по источнику, $.
+// Cost per registration (CPR) by source, $.
 export const SOURCE_CPR = [7.3, 7.3, 4.0, 8.3];
 export const COUNTRY_CPR_MULT: Record<string, number> = { KZ: 1, UZ: 0.7, KG: 0.65, TJ: 0.55, MN: 0.9 };
 
-// Кампании по источнику (к имени добавляется код страны).
+// Campaigns by source (the country code is appended to the name).
 export const CAMPAIGNS: Record<number, string[]> = {
   0: ["Search_Brand", "Search_Generic", "PMax_Shopping", "UAC_Install"],
   1: ["Video_Promo", "Spark_UGC", "Smart_Plus"],

@@ -34,7 +34,7 @@ export function ThemeToggle() {
                 : "border-line text-muted hover:text-ink"
             }`}
           >
-            {t === "light" ? "Светлая" : "Тёмная"}
+            {t === "light" ? "Light" : "Dark"}
           </button>
         );
       })}

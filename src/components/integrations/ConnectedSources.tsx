@@ -15,8 +15,8 @@ function Pill({ text, kind }: { text: string; kind: "ok" | "error" | "soon" }) {
   return <span className="mono" style={{ ...style, fontSize: 10.5, padding: "3px 7px", borderRadius: 99 }}>{text}</span>;
 }
 function pillFor(s: SourceStatus) {
-  if (!s.configured) return <Pill text="не настроен" kind="soon" />;
-  return s.ok ? <Pill text="подключён" kind="ok" /> : <Pill text="ошибка" kind="error" />;
+  if (!s.configured) return <Pill text="not configured" kind="soon" />;
+  return s.ok ? <Pill text="connected" kind="ok" /> : <Pill text="error" kind="error" />;
 }
 
 function Card({ ab, name, type, desc, pill, detail, badge }: {
@@ -49,42 +49,42 @@ export function ConnectedSources() {
     try {
       const r = await fetch("/api/connections", { cache: "no-store" });
       setData(await r.json());
-    } catch { /* оставляем прошлое состояние */ }
+    } catch { /* keep the previous state */ }
   }
   useEffect(() => { load(); }, []);
 
   const c = data?.connection;
   const sourceBadge = c
-    ? c.source === "ui" ? <Pill text="настроено в UI" kind="ok" />
-      : c.source === "env" ? <Pill text="из .env.local" kind="soon" />
-      : <Pill text="демо-режим" kind="soon" />
+    ? c.source === "ui" ? <Pill text="set in UI" kind="ok" />
+      : c.source === "env" ? <Pill text="from .env.local" kind="soon" />
+      : <Pill text="demo mode" kind="soon" />
     : null;
 
   return (
     <>
       <div className="flex items-center justify-between" style={{ marginBottom: 12 }}>
-        <h2 className="font-semibold" style={{ fontSize: 15 }}>Подключено</h2>
+        <h2 className="font-semibold" style={{ fontSize: 15 }}>Connected</h2>
         {data?.canManage && (
           <button
             onClick={() => setEditing(true)}
             className="inline-flex items-center gap-1.5 border border-line hover:border-line-2"
             style={{ borderRadius: 8, padding: "7px 12px", fontSize: 12.5 }}
           >
-            <Settings2 size={14} /> Настроить подключение
+            <Settings2 size={14} /> Configure connection
           </button>
         )}
       </div>
       <div className="grid" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 14, marginBottom: 28 }}>
         <Card
-          ab="CH" name="ClickHouse" type="база данных (в демо: синтетика)"
-          desc="Заказы, выручка, пользователи. Основной DWH. В демо заменён синтетическим хранилищем в памяти."
+          ab="CH" name="ClickHouse" type="database (synthetic in demo)"
+          desc="Orders, revenue, users. The main DWH. In the demo it is replaced by a synthetic in-memory store."
           pill={data ? pillFor(data.status.ch) : <Pill text="…" kind="soon" />}
           detail={data?.status.ch.detail ?? ""}
           badge={sourceBadge}
         />
         <Card
-          ab="PG" name="PostgreSQL" type="база данных (через ClickHouse)"
-          desc="Регистрации и профили пользователей, читаются через мост ClickHouse -> PostgreSQL."
+          ab="PG" name="PostgreSQL" type="database (via ClickHouse)"
+          desc="Sign-ups and user profiles, read through the ClickHouse -> PostgreSQL bridge."
           pill={data ? pillFor(data.status.pg) : <Pill text="…" kind="soon" />}
           detail={data?.status.pg.detail ?? ""}
         />
@@ -113,7 +113,7 @@ function ConnectionEditor({ initial, onClose, onSaved }: {
   const [test, setTest] = useState<{ ok: boolean; text: string } | null>(null);
   const [err, setErr] = useState("");
 
-  // пароль: если поле не трогали – шлём null («оставить как было»)
+  // password: if the field was not touched, send null ("keep as is")
   const pwPayload = () => (pwTouched ? password : null);
 
   async function doTest() {
@@ -124,8 +124,8 @@ function ConnectionEditor({ initial, onClose, onSaved }: {
         body: JSON.stringify({ url, username, database, password: pwPayload() }),
       });
       const d = await r.json();
-      if (d.ok) setTest({ ok: true, text: `версия ${d.version}, ${d.ms} мс, мост в PostgreSQL: ${d.pgBridge ? "да" : "нет"}` });
-      else setTest({ ok: false, text: d.error || "не удалось подключиться" });
+      if (d.ok) setTest({ ok: true, text: `version ${d.version}, ${d.ms} ms, PostgreSQL bridge: ${d.pgBridge ? "yes" : "no"}` });
+      else setTest({ ok: false, text: d.error || "could not connect" });
     } catch (e) { setTest({ ok: false, text: String(e).slice(0, 160) }); }
     finally { setBusy(null); }
   }
@@ -138,19 +138,19 @@ function ConnectionEditor({ initial, onClose, onSaved }: {
         body: JSON.stringify({ url, username, database, password: pwPayload() }),
       });
       const d = await r.json();
-      if (!r.ok) { setErr(d.error || "не удалось сохранить"); return; }
+      if (!r.ok) { setErr(d.error || "could not save"); return; }
       onSaved();
     } catch (e) { setErr(String(e).slice(0, 160)); }
     finally { setBusy(null); }
   }
 
   async function doReset() {
-    if (!window.confirm("Убрать подключение из UI и вернуться к .env.local?")) return;
+    if (!window.confirm("Remove the UI connection and fall back to .env.local?")) return;
     setBusy("reset"); setErr("");
     try {
       const r = await fetch("/api/connections", { method: "DELETE" });
       const d = await r.json();
-      if (!r.ok) { setErr(d.error || "не удалось сбросить"); return; }
+      if (!r.ok) { setErr(d.error || "could not reset"); return; }
       onSaved();
     } catch (e) { setErr(String(e).slice(0, 160)); }
     finally { setBusy(null); }
@@ -162,7 +162,7 @@ function ConnectionEditor({ initial, onClose, onSaved }: {
     <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: "rgba(0,0,0,0.35)" }} onClick={onClose}>
       <div className="bg-surface border border-line rounded-xl w-full" style={{ maxWidth: 520 }} onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between border-b border-line" style={{ padding: "14px 18px" }}>
-          <h2 className="font-semibold" style={{ fontSize: 15 }}>Подключение ClickHouse</h2>
+          <h2 className="font-semibold" style={{ fontSize: 15 }}>ClickHouse connection</h2>
           <button onClick={onClose} className="text-muted hover:text-ink"><X size={18} /></button>
         </div>
 
@@ -173,20 +173,20 @@ function ConnectionEditor({ initial, onClose, onSaved }: {
           </label>
           <div className="grid grid-cols-2 gap-3">
             <label className="flex flex-col gap-1">
-              <span className="text-muted" style={{ fontSize: 11.5 }}>Пользователь</span>
+              <span className="text-muted" style={{ fontSize: 11.5 }}>User</span>
               <input value={username} onChange={(e) => setUsername(e.target.value)} placeholder="default" className="border border-line bg-surface rounded-lg mono" style={field} />
             </label>
             <label className="flex flex-col gap-1">
-              <span className="text-muted" style={{ fontSize: 11.5 }}>База (необязательно)</span>
+              <span className="text-muted" style={{ fontSize: 11.5 }}>Database (optional)</span>
               <input value={database} onChange={(e) => setDatabase(e.target.value)} placeholder="default" className="border border-line bg-surface rounded-lg mono" style={field} />
             </label>
           </div>
           <label className="flex flex-col gap-1">
-            <span className="text-muted" style={{ fontSize: 11.5 }}>Пароль</span>
+            <span className="text-muted" style={{ fontSize: 11.5 }}>Password</span>
             <input
               type="password" value={password}
               onChange={(e) => { setPassword(e.target.value); setPwTouched(true); }}
-              placeholder={initial.hasPassword ? "•••••••• (сохранён, оставьте пустым чтобы не менять)" : "не задан"}
+              placeholder={initial.hasPassword ? "•••••••• (saved, leave empty to keep)" : "not set"}
               className="border border-line bg-surface rounded-lg mono" style={field}
             />
           </label>
@@ -198,23 +198,23 @@ function ConnectionEditor({ initial, onClose, onSaved }: {
             </div>
           )}
           {err && <div style={{ fontSize: 12.5, color: "var(--neg)" }}>{err}</div>}
-          <p className="text-muted" style={{ fontSize: 11 }}>Подключение из UI имеет приоритет над .env.local. Пароль хранится на сервере (data/), в браузер не отдаётся.</p>
+          <p className="text-muted" style={{ fontSize: 11 }}>A UI connection takes priority over .env.local. The password is stored on the server (data/) and never sent to the browser.</p>
         </div>
 
         <div className="flex items-center justify-between gap-2 border-t border-line" style={{ padding: "14px 18px" }}>
           <div>
             {initial.source === "ui" && (
               <button onClick={doReset} disabled={busy !== null} className="text-muted hover:text-ink disabled:opacity-50" style={{ fontSize: 12.5 }}>
-                Сбросить к .env
+                Reset to .env
               </button>
             )}
           </div>
           <div className="flex items-center gap-2">
             <button onClick={doTest} disabled={busy !== null || !url} className="inline-flex items-center gap-1.5 border border-line hover:border-line-2 disabled:opacity-50" style={{ borderRadius: 8, padding: "8px 14px", fontSize: 13 }}>
-              {busy === "test" && <Loader2 size={14} className="animate-spin" />} Проверить
+              {busy === "test" && <Loader2 size={14} className="animate-spin" />} Test
             </button>
             <button onClick={doSave} disabled={busy !== null || !url} className="inline-flex items-center gap-1.5 disabled:opacity-50 text-[color:var(--accent-ink)]" style={{ background: "var(--accent)", borderRadius: 8, padding: "8px 16px", fontSize: 13, fontWeight: 500 }}>
-              {busy === "save" && <Loader2 size={14} className="animate-spin" />} Сохранить
+              {busy === "save" && <Loader2 size={14} className="animate-spin" />} Save
             </button>
           </div>
         </div>

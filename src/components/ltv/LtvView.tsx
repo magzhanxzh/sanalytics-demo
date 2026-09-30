@@ -12,13 +12,13 @@ import type { LtvResult } from "@/lib/ltv/ltv";
 
 const LINE_COLORS = ["#0d9488", "#6366f1", "#f59e0b", "#ec4899", "#10b981", "#3b82f6", "#ef4444", "#a855f7"];
 
-const money0 = (v: number) => "$" + Math.round(v).toLocaleString("ru-RU");
-const money2 = (v: number) => "$" + v.toLocaleString("ru-RU", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-const int = (v: number) => Math.round(v).toLocaleString("ru-RU");
+const money0 = (v: number) => "$" + Math.round(v).toLocaleString("en-US");
+const money2 = (v: number) => "$" + v.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const int = (v: number) => Math.round(v).toLocaleString("en-US");
 const pct = (v: number) => v.toFixed(1) + "%";
 const monthLabel = (ym: string) => {
   const [y, m] = ym.split("-");
-  const names = ["янв", "фев", "мар", "апр", "май", "июн", "июл", "авг", "сен", "окт", "ноя", "дек"];
+  const names = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
   return `${names[Number(m) - 1]} ${y.slice(2)}`;
 };
 
@@ -44,7 +44,7 @@ export function LtvView({ country: initCountry, orderCreator: initCreator, userC
     }).catch(() => {});
   }, []);
 
-  // Ограниченному пользователю подставляем его страну.
+  // A restricted user gets their own country.
   useEffect(() => {
     if (access.allowed && access.allowed.length && !access.allowed.includes(country)) setCountry(access.allowed[0]);
   }, [access.allowed, country]);
@@ -60,7 +60,7 @@ export function LtvView({ country: initCountry, orderCreator: initCreator, userC
       const qs = new URLSearchParams({ country, ocreator: creator, ucreator, b2b: b2b ? "exclude" : "include" });
       const r = await fetch(`/api/ltv?${qs.toString()}`, { cache: "no-store" });
       const d = await r.json();
-      if (id === reqId.current) setData(d); // игнорируем ответы устаревших запросов
+      if (id === reqId.current) setData(d); // ignore responses to stale requests
     } catch (e) {
       if (id === reqId.current) setData({ configured: true, error: String(e) });
     } finally {
@@ -69,47 +69,47 @@ export function LtvView({ country: initCountry, orderCreator: initCreator, userC
   }, [country, creator, ucreator, b2b]);
 
   useEffect(() => { load(); }, [load]);
-  useEffect(() => () => clearTimer(), []); // очистка интервала при размонтировании
+  useEffect(() => () => clearTimer(), []); // clear the interval on unmount
 
   const countryOpts = countryOptions(access.allowed);
   const cOpts = countryOpts.length ? countryOpts : COUNTRIES.filter((c) => c.code !== "all").map((c) => [c.code, c.label] as [string, string]);
 
   return (
     <div className="flex flex-col gap-4" style={{ padding: "0 4px 40px" }}>
-      {/* Фильтры */}
+      {/* Filters */}
       <div className="flex flex-wrap items-center gap-2">
-        <Select label="Страна" value={country} onChange={setCountry} options={cOpts} />
-        <Select label="Канал заказа" value={creator} onChange={setCreator} options={orderCreators.map((c) => [c, c])} />
-        <Select label="Канал рег." value={ucreator} onChange={setUcreator} options={[["all", "Все"], ...userCreators.map((c) => [c, c] as [string, string])]} />
-        <Select label="B2B" value={b2b ? "exclude" : "include"} onChange={(v) => setB2b(v === "exclude")} options={[["exclude", "Искл"], ["include", "Вкл"]]} />
+        <Select label="Country" value={country} onChange={setCountry} options={cOpts} />
+        <Select label="Order channel" value={creator} onChange={setCreator} options={orderCreators.map((c) => [c, c])} />
+        <Select label="Sign-up channel" value={ucreator} onChange={setUcreator} options={[["all", "All"], ...userCreators.map((c) => [c, c] as [string, string])]} />
+        <Select label="B2B" value={b2b ? "exclude" : "include"} onChange={(v) => setB2b(v === "exclude")} options={[["exclude", "Excl"], ["include", "Incl"]]} />
         {data?.window && (
           <span className="text-muted mono" style={{ fontSize: 11.5 }}>
-            окно регистрации {data.window.start} … {data.window.end} (до текущего месяца)
+            sign-up window {data.window.start} … {data.window.end} (up to the current month)
           </span>
         )}
         <button onClick={load} disabled={loading} className="ml-auto inline-flex items-center gap-1.5 border border-line hover:border-line-2 disabled:opacity-50" style={{ borderRadius: 8, padding: "7px 13px", fontSize: 13 }}>
-          {loading ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />} Обновить
+          {loading ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />} Refresh
         </button>
       </div>
 
       {loading && !data && <Skeleton elapsed={elapsed} />}
-      {data && !data.configured && <Note text="Хранилище не подключено. Задайте подключение в Интеграциях." />}
-      {data?.error && <Note text={`Ошибка данных: ${data.error}`} bad />}
-      {loading && data && <div className="text-muted mono" style={{ fontSize: 11.5 }}>Пересчёт… {elapsed}с</div>}
+      {data && !data.configured && <Note text="The warehouse is not connected. Set up the connection in Integrations." />}
+      {data?.error && <Note text={`Data error: ${data.error}`} bad />}
+      {loading && data && <div className="text-muted mono" style={{ fontSize: 11.5 }}>Recomputing… {elapsed}s</div>}
 
       {data?.kpi && (
         <>
           <KpiStrip d={data} />
 
-          {/* Кривая накопленного LTV */}
+          {/* Cumulative LTV curve */}
           <Card>
             <CardHead
-              title="Накопленный LTV по месяцам жизни когорты"
-              hint={denom === "reg" ? "выручка ÷ все зарегистрированные в когорте" : "выручка ÷ покупатели, накопленные к этому месяцу"}
+              title="Cumulative LTV by cohort month of life"
+              hint={denom === "reg" ? "revenue ÷ all sign-ups in the cohort" : "revenue ÷ buyers accumulated by this month"}
               right={
                 <div className="flex items-center gap-1">
-                  <Toggle active={denom === "reg"} onClick={() => setDenom("reg")}>на регистранта</Toggle>
-                  <Toggle active={denom === "buyer"} onClick={() => setDenom("buyer")}>на покупателя</Toggle>
+                  <Toggle active={denom === "reg"} onClick={() => setDenom("reg")}>per sign-up</Toggle>
+                  <Toggle active={denom === "buyer"} onClick={() => setDenom("buyer")}>per buyer</Toggle>
                 </div>
               }
             />
@@ -117,9 +117,9 @@ export function LtvView({ country: initCountry, orderCreator: initCreator, userC
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={denom === "reg" ? data.curveReg : data.curveBuyer} margin={{ top: 8, right: 16, bottom: 4, left: 4 }}>
                   <CartesianGrid stroke="var(--line)" vertical={false} />
-                  <XAxis dataKey="mol" tickLine={false} axisLine={{ stroke: "var(--line-2)" }} tick={{ fontSize: 10.5, fill: "var(--muted)", fontFamily: "var(--font-mono)" }} label={{ value: "месяц жизни", position: "insideBottom", offset: -2, fontSize: 10, fill: "var(--muted)" }} />
+                  <XAxis dataKey="mol" tickLine={false} axisLine={{ stroke: "var(--line-2)" }} tick={{ fontSize: 10.5, fill: "var(--muted)", fontFamily: "var(--font-mono)" }} label={{ value: "month of life", position: "insideBottom", offset: -2, fontSize: 10, fill: "var(--muted)" }} />
                   <YAxis tickLine={false} axisLine={false} width={48} tick={{ fontSize: 10.5, fill: "var(--muted)", fontFamily: "var(--font-mono)" }} tickFormatter={(v) => "$" + v} />
-                  <Tooltip formatter={(v, n) => [money2(Number(v)), monthLabel(String(n))]} labelFormatter={(l) => `Месяц жизни ${l}`} contentStyle={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 8, fontSize: 12 }} />
+                  <Tooltip formatter={(v, n) => [money2(Number(v)), monthLabel(String(n))]} labelFormatter={(l) => `Month of life ${l}`} contentStyle={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 8, fontSize: 12 }} />
                   <Legend formatter={(v) => monthLabel(String(v))} wrapperStyle={{ fontSize: 11 }} />
                   {(data.curveCohorts ?? []).map((c, i) => (
                     <Line key={c} type="monotone" dataKey={c} stroke={LINE_COLORS[i % LINE_COLORS.length]} strokeWidth={2} dot={false} connectNulls={false} />
@@ -130,16 +130,16 @@ export function LtvView({ country: initCountry, orderCreator: initCreator, userC
           </Card>
 
           <div className="grid gap-4" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(360px, 1fr))" }}>
-            {/* Распределение */}
+            {/* Distribution */}
             <Card>
-              <CardHead title="Распределение покупателей по размеру LTV" hint="сколько клиентов в каждом диапазоне суммарной выручки" />
+              <CardHead title="Buyers by LTV size" hint="how many customers fall in each total revenue range" />
               <div style={{ height: 260 }}>
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={data.dist} margin={{ top: 8, right: 12, bottom: 4, left: 4 }}>
                     <CartesianGrid stroke="var(--line)" vertical={false} />
                     <XAxis dataKey="bucket" tickLine={false} axisLine={{ stroke: "var(--line-2)" }} tick={{ fontSize: 9.5, fill: "var(--muted)" }} interval={0} angle={-25} textAnchor="end" height={60} />
                     <YAxis tickLine={false} axisLine={false} width={44} tick={{ fontSize: 10.5, fill: "var(--muted)", fontFamily: "var(--font-mono)" }} tickFormatter={(v) => (v >= 1000 ? (v / 1000).toFixed(0) + "k" : String(v))} />
-                    <Tooltip formatter={(v) => [int(Number(v)) + " клиентов", "Клиенты"]} contentStyle={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 8, fontSize: 12 }} />
+                    <Tooltip formatter={(v) => [int(Number(v)) + " customers", "Customers"]} contentStyle={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 8, fontSize: 12 }} />
                     <Bar dataKey="users" radius={[3, 3, 0, 0]}>
                       {(data.dist ?? []).map((_, i) => <Cell key={i} fill={i === 0 ? "var(--muted)" : "var(--accent)"} />)}
                     </Bar>
@@ -148,14 +148,14 @@ export function LtvView({ country: initCountry, orderCreator: initCreator, userC
               </div>
             </Card>
 
-            {/* Итоги по когортам */}
+            {/* Cohort totals */}
             <Card>
-              <CardHead title="Итоги по когортам" hint="суммарно к текущему моменту" />
+              <CardHead title="Cohort totals" hint="cumulative to date" />
               <div className="overflow-auto" style={{ maxHeight: 300 }}>
                 <table className="w-full" style={{ fontSize: 12.5 }}>
                   <thead>
                     <tr className="text-left text-muted" style={{ fontSize: 10.5, textTransform: "uppercase", letterSpacing: "0.05em" }}>
-                      <Th>Когорта</Th><Th r>Рег.</Th><Th r>Покуп.</Th><Th r>Платят</Th><Th r>Выручка</Th><Th r>LTV/рег</Th><Th r>LTV/пок</Th>
+                      <Th>Cohort</Th><Th r>Sign-ups</Th><Th r>Buyers</Th><Th r>Paying</Th><Th r>Revenue</Th><Th r>LTV/sign-up</Th><Th r>LTV/buyer</Th>
                     </tr>
                   </thead>
                   <tbody>
@@ -176,10 +176,10 @@ export function LtvView({ country: initCountry, orderCreator: initCreator, userC
             </Card>
           </div>
 
-          {/* Матрица LTV/рег */}
+          {/* LTV per sign-up matrix */}
           {data.matrix && (
             <Card>
-              <CardHead title="Матрица LTV на регистранта" hint="накопленный LTV когорты (строка) к месяцу жизни (столбец)" />
+              <CardHead title="LTV per sign-up matrix" hint="cumulative cohort LTV (row) by month of life (column)" />
               <Matrix matrix={data.matrix} />
             </Card>
           )}
@@ -189,19 +189,19 @@ export function LtvView({ country: initCountry, orderCreator: initCreator, userC
   );
 }
 
-/* ------------------------------ подкомпоненты ------------------------------ */
+/* ------------------------------ subcomponents ------------------------------ */
 
 function KpiStrip({ d }: { d: LtvResult }) {
   const k = d.kpi!;
   const items: { label: string; value: string; hint?: string }[] = [
-    { label: "Клиентов в базе", value: int(k.totalCustomers), hint: "зарегистрированы в окне" },
-    { label: "Платящих", value: `${int(k.payingCustomers)} · ${pct(k.payingShare)}` },
-    { label: "Выручка (LTV сумма)", value: money0(k.totalRevenue) },
-    { label: "Ср. LTV платящего", value: money2(k.avgLtvPaying) },
-    { label: "Медиана LTV платящего", value: money2(k.medianLtvPaying) },
-    { label: "Ср. LTV на регистранта", value: money2(k.avgLtvReg) },
-    { label: "Заказов на платящего", value: k.avgOrders.toFixed(2) },
-    { label: "Топ-10% дают", value: pct(k.top10Share), hint: "доля выручки" },
+    { label: "Customers", value: int(k.totalCustomers), hint: "signed up in the window" },
+    { label: "Paying", value: `${int(k.payingCustomers)} · ${pct(k.payingShare)}` },
+    { label: "Revenue (total LTV)", value: money0(k.totalRevenue) },
+    { label: "Avg LTV, paying", value: money2(k.avgLtvPaying) },
+    { label: "Median LTV, paying", value: money2(k.medianLtvPaying) },
+    { label: "Avg LTV per sign-up", value: money2(k.avgLtvReg) },
+    { label: "Orders per paying", value: k.avgOrders.toFixed(2) },
+    { label: "Top 10% bring", value: pct(k.top10Share), hint: "share of revenue" },
   ];
   return (
     <div className="grid gap-2.5" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))" }}>
@@ -223,7 +223,7 @@ function Matrix({ matrix }: { matrix: NonNullable<LtvResult["matrix"]> }) {
       <table style={{ fontSize: 11.5, borderCollapse: "separate", borderSpacing: 0 }}>
         <thead>
           <tr className="text-muted" style={{ fontSize: 10 }}>
-            <Th>Когорта</Th>
+            <Th>Cohort</Th>
             {matrix.mols.map((m) => <th key={m} style={{ padding: "5px 8px", textAlign: "right" }}>M{m}</th>)}
           </tr>
         </thead>
@@ -287,8 +287,8 @@ function Note({ text, bad }: { text: string; bad?: boolean }) {
 function Skeleton({ elapsed }: { elapsed: number }) {
   return (
     <div className="border border-line rounded-xl flex items-center gap-2 text-muted" style={{ padding: 20, fontSize: 13 }}>
-      <Loader2 size={16} className="animate-spin" /> Считаем когорты LTV… {elapsed}с
-      <span className="mono" style={{ fontSize: 11 }}>(первый расчёт тяжёлый, потом из кеша)</span>
+      <Loader2 size={16} className="animate-spin" /> Computing LTV cohorts… {elapsed}s
+      <span className="mono" style={{ fontSize: 11 }}>(the first run is heavy, then it comes from cache)</span>
     </div>
   );
 }

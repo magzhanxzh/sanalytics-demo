@@ -2,14 +2,14 @@ import { getAcquisitionChannels } from "@/lib/marketing/acquisition";
 import type { CardFilters } from "@/lib/queries/cards";
 
 const COLORS = ["var(--c1)", "var(--c2)", "var(--c3)", "var(--c4)", "var(--c5)"];
-const money0 = (v: number) => "$" + Math.round(v).toLocaleString("ru-RU");
-const nf = (v: number) => Math.round(v).toLocaleString("ru-RU");
+const money0 = (v: number) => "$" + Math.round(v).toLocaleString("en-US");
+const nf = (v: number) => Math.round(v).toLocaleString("en-US");
 
 function Shell({ head, children }: { head?: React.ReactNode; children: React.ReactNode }) {
   return (
     <div className="border border-line bg-surface rounded-xl overflow-hidden">
       <div className="flex items-center justify-between border-b border-line" style={{ padding: "16px 18px" }}>
-        <h2 className="font-semibold" style={{ fontSize: 14.5 }}>Каналы привлечения</h2>
+        <h2 className="font-semibold" style={{ fontSize: 14.5 }}>Acquisition channels</h2>
         {head}
       </div>
       {children}
@@ -24,8 +24,8 @@ export async function AcquisitionChannels({ filters }: { filters: CardFilters })
     return (
       <Shell>
         <div className="text-muted" style={{ padding: "22px 18px", fontSize: 13, lineHeight: 1.6 }}>
-          Пока не подключён ни один рекламный кабинет. Добавьте кабинет в разделе{" "}
-          <span className="text-ink" style={{ fontWeight: 500 }}>Интеграции → Рекламные кабинеты</span>, и здесь появятся его расход, выручка и ROAS.
+          No ad accounts connected yet. Add one in{" "}
+          <span className="text-ink" style={{ fontWeight: 500 }}>Integrations → Ad accounts</span> and its spend, revenue and ROAS will appear here.
         </div>
       </Shell>
     );
@@ -35,7 +35,7 @@ export async function AcquisitionChannels({ filters }: { filters: CardFilters })
     return (
       <Shell>
         <div className="text-muted" style={{ padding: "22px 18px", fontSize: 13, lineHeight: 1.6 }}>
-          {r.note ?? "Нет данных по каналам за период."}
+          {r.note ?? "No channel data for this period."}
         </div>
       </Shell>
     );
@@ -44,12 +44,12 @@ export async function AcquisitionChannels({ filters }: { filters: CardFilters })
   const maxSpend = Math.max(...r.channels.map((c) => c.spend), 1);
 
   return (
-    <Shell head={<span className="text-muted mono" style={{ fontSize: 12 }}>расход {money0(r.totalSpend)} · ROAS {r.roas.toFixed(1)}</span>}>
+    <Shell head={<span className="text-muted mono" style={{ fontSize: 12 }}>spend {money0(r.totalSpend)} · ROAS {r.roas.toFixed(1)}</span>}>
       <div className="grid text-muted" style={{ gridTemplateColumns: "minmax(0,1.4fr) repeat(4, minmax(0,1fr)) minmax(0,88px)", padding: "10px 18px", fontSize: 11, textTransform: "uppercase", letterSpacing: "0.06em" }}>
-        <span>Канал</span>
-        <span className="text-right">Расход</span>
-        <span className="text-right">Выручка</span>
-        <span className="text-right">Заказы</span>
+        <span>Channel</span>
+        <span className="text-right">Spend</span>
+        <span className="text-right">Revenue</span>
+        <span className="text-right">Orders</span>
         <span className="text-right">CAC</span>
         <span className="text-right">ROAS</span>
       </div>
@@ -70,7 +70,7 @@ export async function AcquisitionChannels({ filters }: { filters: CardFilters })
         </div>
       ))}
       <div className="text-muted" style={{ padding: "10px 18px", fontSize: 11, borderTop: "1px solid var(--line)" }}>
-        расход из подключённых кабинетов · заказы и выручка по источнику привлечения клиента (AppsFlyer){r.paidOrdersShare !== undefined ? ` · платные каналы: ${r.paidOrdersShare.toFixed(0)}% заказов` : ""}
+        spend from connected ad accounts · orders and revenue by the use’s acquisition source (AppsFlyer){r.paidOrdersShare !== undefined ? ` · paid channels: ${r.paidOrdersShare.toFixed(0)}% of orders` : ""}
       </div>
     </Shell>
   );
@@ -79,8 +79,8 @@ export async function AcquisitionChannels({ filters }: { filters: CardFilters })
 export function AcquisitionChannelsSkeleton() {
   return (
     <div className="border border-line bg-surface rounded-xl animate-pulse" style={{ height: 260 }}>
-      <div className="border-b border-line" style={{ padding: "16px 18px", fontSize: 14.5, fontWeight: 600 }}>Каналы привлечения</div>
-      <div className="text-muted" style={{ padding: "22px 18px", fontSize: 12.5 }}>Считаем расход и ROAS по кабинетам…</div>
+      <div className="border-b border-line" style={{ padding: "16px 18px", fontSize: 14.5, fontWeight: 600 }}>Acquisition channels</div>
+      <div className="text-muted" style={{ padding: "22px 18px", fontSize: 12.5 }}>Computing spend and ROAS by ad account…</div>
     </div>
   );
 }

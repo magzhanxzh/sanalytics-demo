@@ -11,13 +11,13 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
 
   return (
     <>
-      <AppHeader title="Дашборд" subtitle="Конструктор отчёта" />
+      <AppHeader title="Dashboard" subtitle="Report builder" />
       <div style={{ padding: "22px 28px 60px" }}>
         {dashboard ? (
           <DashboardView initial={dashboard} />
         ) : (
           <div className="text-muted" style={{ fontSize: 13.5 }}>
-            Дашборд не найден. <Link href="/dashboards" className="text-accent">К списку</Link>
+            Dashboard not found. <Link href="/dashboards" className="text-accent">Back to list</Link>
           </div>
         )}
       </div>

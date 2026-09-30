@@ -38,20 +38,20 @@ export function UsersManager() {
   return (
     <div className="border border-line bg-surface rounded-xl overflow-hidden">
       <div className="border-b border-line" style={{ padding: "14px 18px" }}>
-        <h2 className="font-semibold" style={{ fontSize: 14.5 }}>Пользователи и доступы</h2>
-        <p className="text-muted" style={{ fontSize: 12, marginTop: 2 }}>Только владелец назначает роли и страны. Маркетолог/Наблюдатель видят только свои страны.</p>
+        <h2 className="font-semibold" style={{ fontSize: 14.5 }}>Users and access</h2>
+        <p className="text-muted" style={{ fontSize: 12, marginTop: 2 }}>Only the owner assigns roles and countries. Marketers and viewers see only their countries.</p>
       </div>
 
       {pending.length > 0 && (
         <div className="flex items-center gap-2" style={{ padding: "10px 18px", background: "var(--accent-soft)", borderBottom: "1px solid var(--line)" }}>
           <UserPlus size={15} className="text-accent" />
           <span style={{ fontSize: 12.5, color: "var(--accent)" }}>
-            {pending.length} {pending.length === 1 ? "новый пользователь" : "новых пользователей"} ждут назначения доступа
+            {pending.length} {pending.length === 1 ? "new user is" : "new users are"} waiting for access
           </span>
         </div>
       )}
 
-      {users.length === 0 && <div className="text-muted" style={{ padding: "18px", fontSize: 13 }}>Пользователей пока нет.</div>}
+      {users.length === 0 && <div className="text-muted" style={{ padding: "18px", fontSize: 13 }}>No users yet.</div>}
 
       {users.map((u) => {
         const restricted = isGeoRestricted(u.role);
@@ -62,20 +62,20 @@ export function UsersManager() {
             <div className="flex items-center gap-3 flex-wrap">
               <span className="mono flex items-center justify-center bg-sunk border border-line shrink-0" style={{ width: 30, height: 30, borderRadius: 99, fontSize: 12, fontWeight: 600 }}>{u.email[0]?.toUpperCase()}</span>
               <div className="flex-1 min-w-0">
-                <div className="truncate" style={{ fontSize: 13, fontWeight: 500 }}>{u.email}{isPending && <span className="text-accent" style={{ fontSize: 11.5 }}> · новый</span>}</div>
+                <div className="truncate" style={{ fontSize: 13, fontWeight: 500 }}>{u.email}{isPending && <span className="text-accent" style={{ fontSize: 11.5 }}> · new</span>}</div>
                 <div className="text-muted" style={{ fontSize: 11.5 }}>{ROLE_LABELS[u.role]}</div>
               </div>
 
               {isOwnerRow ? (
-                <span className="mono text-muted" style={{ fontSize: 12 }}>Владелец (вы)</span>
+                <span className="mono text-muted" style={{ fontSize: 12 }}>Owner (you)</span>
               ) : (
                 <>
                   <select value={ASSIGNABLE_ROLES.includes(u.role) ? u.role : "viewer"} onChange={(e) => patch(u.id, { role: e.target.value as Role })} className="border border-line bg-surface rounded-[7px]" style={{ padding: "6px 9px", fontSize: 12.5 }}>
-                    {isPending && <option value="pending" disabled>– выберите роль –</option>}
+                    {isPending && <option value="pending" disabled>– choose a role –</option>}
                     {ASSIGNABLE_ROLES.map((r) => <option key={r} value={r}>{ROLE_LABELS[r]}</option>)}
                   </select>
                   <button onClick={() => save(u)} disabled={savingId === u.id} className="text-[color:var(--accent-ink)] disabled:opacity-60" style={{ background: "var(--accent)", borderRadius: 7, padding: "6px 12px", fontSize: 12.5, fontWeight: 500 }}>
-                    {savedId === u.id ? <Check size={14} /> : "Сохранить"}
+                    {savedId === u.id ? <Check size={14} /> : "Save"}
                   </button>
                 </>
               )}
@@ -83,7 +83,7 @@ export function UsersManager() {
 
             {!isOwnerRow && restricted && (
               <div className="flex items-center gap-2 flex-wrap" style={{ marginTop: 10, paddingLeft: 42 }}>
-                <span className="text-muted" style={{ fontSize: 11.5 }}>Доступ к странам:</span>
+                <span className="text-muted" style={{ fontSize: 11.5 }}>Country access:</span>
                 {REAL_COUNTRIES.map((c) => {
                   const on = u.countries.includes(c.code);
                   return (
@@ -92,11 +92,11 @@ export function UsersManager() {
                     </button>
                   );
                 })}
-                {u.countries.length === 0 && <span className="text-neg" style={{ fontSize: 11.5 }}>не выбрано – доступа нет</span>}
+                {u.countries.length === 0 && <span className="text-neg" style={{ fontSize: 11.5 }}>none selected, no access</span>}
               </div>
             )}
             {!isOwnerRow && !restricted && u.role !== "pending" && (
-              <div className="text-muted" style={{ fontSize: 11.5, marginTop: 8, paddingLeft: 42 }}>Полный доступ ко всем странам.</div>
+              <div className="text-muted" style={{ fontSize: 11.5, marginTop: 8, paddingLeft: 42 }}>Full access to all countries.</div>
             )}
           </div>
         );

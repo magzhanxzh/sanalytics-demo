@@ -23,10 +23,10 @@ import {
   type UserFilter,
 } from "@/lib/demo/warehouse";
 
-// СЛОЙ МЕТРИК. Единая точка, через которую экраны, дашборды, алерты и ИИ-агент
-// получают цифры: расчёт + кеш по ключу фильтров + журнал запусков.
-// В продакшене compute* ходят в ClickHouse; в демо их обслуживает синтетическое
-// хранилище (src/lib/demo/warehouse.ts) с тем же набором агрегатов.
+// METRICS LAYER. The single entry point through which screens, dashboards, alerts and the AI agent
+// get their numbers: computation + cache keyed by filters + run log.
+// In production compute* query ClickHouse; in the demo they are served by the synthetic
+// store (src/lib/demo/warehouse.ts) with the same set of aggregates.
 
 export type CardResult = {
   code: string;
@@ -37,8 +37,8 @@ export type CardResult = {
 
 export type OverviewRaw = {
   registrations: number;
-  cohortBuyers: number;     // купили в периоде из зарегистрированных в периоде (для воронки)
-  cohortPaidBuyers: number; // из них оплатили
+  cohortBuyers: number;     // bought in the period among those who signed up in the period (for the funnel)
+  cohortPaidBuyers: number; // of them, paid
   buyers: number;
   paidBuyers: number;
   orders: number;
@@ -73,18 +73,16 @@ function shiftDays(d: Date, days: number): Date {
   return new Date(d.getTime() + days * DAY_MS);
 }
 function ddmm(d: Date): string {
-  const dd = String(d.getUTCDate()).padStart(2, "0");
-  const mm = String(d.getUTCMonth() + 1).padStart(2, "0");
-  return `${dd}.${mm}`;
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
 }
 function startOfWeek(d: Date): Date {
-  const back = (d.getUTCDay() + 6) % 7; // к понедельнику
+  const back = (d.getUTCDay() + 6) % 7; // back to Monday
   return shiftDays(new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate())), -back);
 }
 function monthLabel(d: Date): string {
-  return d.toLocaleDateString("ru-RU", { month: "short", year: "2-digit", timeZone: "UTC" });
+  return d.toLocaleDateString("en-US", { month: "short", year: "2-digit", timeZone: "UTC" });
 }
-// Список бакетов [from, toExcl) по гранулярности: ключ = дата начала, подпись для оси.
+// Bucket list [from, toExcl) by granularity: key = start date, label for the axis.
 function bucketList(from: Date, toExcl: Date, grain: "day" | "week" | "month"): { key: string; label: string }[] {
   const out: { key: string; label: string }[] = [];
   if (grain === "month") {
@@ -103,11 +101,11 @@ function bucketList(from: Date, toExcl: Date, grain: "day" | "week" | "month"): 
   return out;
 }
 
-// Нижняя граница для «не задан»: фактически без фильтра по времени заказа (все данные).
+// Lower bound for "not set": effectively no order time filter (all data).
 const UNBOUNDED_FROM = "2000-01-01";
 
 function windows(f: CardFilters) {
-  // Период заказа «не задан» (пусто) -> без фильтра по времени (весь период).
+  // Order period "not set" (empty) -> no time filter (all time).
   const now = new Date();
   const hasFrom = Boolean(f.from);
   const hasTo = Boolean(f.to);
@@ -117,7 +115,7 @@ function windows(f: CardFilters) {
   const toExcl = shiftDays(toDate(toStr), 1);
   const lenDays = Math.max(1, Math.round((toExcl.getTime() - from.getTime()) / DAY_MS));
   const prevFrom = shiftDays(from, -lenDays);
-  // Сравнение с прошлым периодом имеет смысл только при заданной нижней границе.
+  // Comparison with the previous period only makes sense with a lower bound.
   return { from, toExcl, prevFrom, lenDays, hasFrom, hasTo };
 }
 function regWindow(f: CardFilters, orderFrom: string, orderToExcl: string) {
@@ -125,20 +123,20 @@ function regWindow(f: CardFilters, orderFrom: string, orderToExcl: string) {
   return { regFrom: orderFrom, regTo: orderToExcl };
 }
 
-// Короткая подпись среза для лога/истории.
+// Short slice label for the log and history.
 export function describeFilters(f: CardFilters): string {
   const country = COUNTRIES.find((c) => c.code === f.country)?.label ?? f.country;
   const parts = [country];
-  parts.push(f.userCreator === "all" ? "клиент: все" : `клиент: ${f.userCreator}`);
-  if (f.orderCreator !== "all") parts.push(`заказ: ${f.orderCreator}`);
+  parts.push(f.userCreator === "all" ? "user: all" : `user: ${f.userCreator}`);
+  if (f.orderCreator !== "all") parts.push(`order: ${f.orderCreator}`);
   parts.push(`${f.from || "…"}..${f.to || "…"}`);
-  if (regActive(f)) parts.push(`рег ${f.regFrom}..${f.regTo}`);
-  if (f.basis === "paid") parts.push("оплачено");
-  if (f.excludeB2b) parts.push("без B2B");
+  if (regActive(f)) parts.push(`signup ${f.regFrom}..${f.regTo}`);
+  if (f.basis === "paid") parts.push("paid");
+  if (f.excludeB2b) parts.push("no B2B");
   return parts.join(" · ");
 }
 
-// Фильтр пользователя (страна, канал регистрации, опционально когорта).
+// User filter (country, sign-up channel, optional cohort).
 function userFilter(f: CardFilters, withCohort: boolean): UserFilter {
   const uf: UserFilter = { country: f.country, userChannel: f.userCreator };
   if (withCohort && regActive(f)) {
@@ -156,11 +154,11 @@ function registrations(f: CardFilters, regFrom: string, regToExcl: string): numb
 
 const EMPTY: Agg = { orders: 0, buyers: 0, paidBuyers: 0, revenue: 0, revenuePaid: 0, weight: 0 };
 
-// --- Сырой расчёт карточек (со сравнением с прошлым периодом) ---
+// --- Raw card computation (with previous period comparison) ---
 async function computeCards(f: CardFilters): Promise<CardsResponse> {
   const { from, toExcl, prevFrom, hasFrom } = windows(f);
   const cohort = regActive(f);
-  // Стрелка сравнения – только когда есть нижняя граница периода (иначе прошлого нет).
+  // Comparison arrow only when the period has a lower bound (otherwise there is no previous period).
   const noPrev = cohort || !hasFrom;
 
   try {
@@ -184,24 +182,24 @@ async function computeCards(f: CardFilters): Promise<CardsResponse> {
     });
 
     const conv = (buyers: number, reg: number) => (reg ? (buyers / reg) * 100 : 0);
-    // Конверсия имеет смысл только с когортой: тогда покупатели входят в когорту и доля
-    // не больше 100%. Без когорты знаменатель и числитель несопоставимы.
+    // Conversion only makes sense with a cohort: then buyers belong to the cohort and the share
+    // is at most 100%. Without a cohort numerator and denominator are not comparable.
     const convCard = cohort
-      ? [mk("conversion", "Конверсия", "percent", conv(cur.buyers, regCur), conv(prev.buyers, regPrev))]
+      ? [mk("conversion", "Conversion", "percent", conv(cur.buyers, regCur), conv(prev.buyers, regPrev))]
       : [];
 
     const cards: CardResult[] = [
-      mk("registrations", "Регистрации", "count", regCur, regPrev),
-      mk("buyers", "Покупатели", "count", cur.buyers, prev.buyers),
+      mk("registrations", "Sign-ups", "count", regCur, regPrev),
+      mk("buyers", "Buyers", "count", cur.buyers, prev.buyers),
       ...convCard,
-      mk("orders", "Заказы", "count", cur.orders, prev.orders),
-      mk("avg_check", "Средний чек", "currency2", avg(cur), avg(prev)),
-      mk("weight_kg", "Вес, кг", "weight", cur.weight, prev.weight),
-      mk("revenue", f.basis === "paid" ? "Выручка (оплачено)" : "Выручка", "currency", revenueOf(cur), revenueOf(prev)),
+      mk("orders", "Orders", "count", cur.orders, prev.orders),
+      mk("avg_check", "Avg check", "currency2", avg(cur), avg(prev)),
+      mk("weight_kg", "Weight, kg", "weight", cur.weight, prev.weight),
+      mk("revenue", f.basis === "paid" ? "Revenue (paid)" : "Revenue", "currency", revenueOf(cur), revenueOf(prev)),
     ];
 
-    // Воронка считается по когорте: покупатели среди зарегистрированных в окне регистрации.
-    // В когортном режиме это те же покупатели, что в карточке.
+    // The funnel is cohort-based: buyers among those who signed up in the sign-up window.
+    // In cohort mode these are the same buyers as in the card.
     const cohortAgg = cohort ? cur : queryOverview(orderFilter(f, from, toExcl), {
       ...uf, regFrom: dayOf(curRegWin.regFrom), regToExcl: dayOf(curRegWin.regTo),
     });
@@ -223,7 +221,7 @@ async function computeCards(f: CardFilters): Promise<CardsResponse> {
   }
 }
 
-// --- Сырой расчёт ряда по периодам ---
+// --- Raw series computation by period ---
 async function computeDaily(f: CardFilters): Promise<DailyResponse> {
   const { from, toExcl, hasFrom } = windows(f);
 
@@ -241,8 +239,8 @@ async function computeDaily(f: CardFilters): Promise<DailyResponse> {
       });
     }
 
-    // При «не задан» (нет нижней границы) не рисуем пустые бакеты от 2000 года:
-    // начинаем ось от самой ранней даты, где реально есть данные.
+    // With "not set" (no lower bound) don't draw empty buckets from the year 2000:
+    // start the axis at the earliest date that actually has data.
     let startBuckets = from;
     if (!hasFrom) {
       const keys = [...orders.keys(), ...regs.keys()].sort();
@@ -268,14 +266,14 @@ async function computeDaily(f: CardFilters): Promise<DailyResponse> {
   }
 }
 
-// --- Кешируемые обёртки ---
+// --- Cached wrappers ---
 function keyOf(kind: string, f: CardFilters): string {
   return kind + ":" + JSON.stringify(f);
 }
 
 export async function getCards(f: CardFilters = defaultFilters(), opts: Opts = {}): Promise<CardsResponse> {
-  // grain влияет только на ряд, не на карточки: исключаем из ключа,
-  // чтобы переключение гранулярности не пересчитывало карточки заново.
+  // grain affects only the series, not the cards: exclude it from the key
+  // so switching granularity doesn't recompute the cards.
   const key = keyOf("cards", { ...f, grain: "day" });
   const hit = cacheGet<CardsResponse>(key);
   if (!opts.force && hit && isFresh(hit.at)) return hit.data;
@@ -324,7 +322,7 @@ export async function getChannels(f: CardFilters = defaultFilters()): Promise<Ch
   }
 }
 
-// --- Реактивация (спячка >= dormancyDays) ---
+// --- Reactivation (dormancy >= dormancyDays) ---
 export type ReactResult = { configured: boolean; react: number; buyers: number; reactFirst: number; reactRepeat: number; error?: string };
 export type ReactCountryResult = { configured: boolean; countries: { country: string; react: number; buyers: number; reactFirst: number; reactRepeat: number }[]; error?: string };
 

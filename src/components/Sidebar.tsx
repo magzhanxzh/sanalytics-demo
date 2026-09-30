@@ -7,32 +7,32 @@ import { LogoMark } from "./LogoMark";
 import { CURRENT_USER } from "@/lib/dashboards/types";
 
 const nav = [
-  { n: "01", href: "/marketing", label: "Маркетинг" },
-  { n: "02", href: "/af-analysis", label: "AF анализ" },
+  { n: "01", href: "/marketing", label: "Marketing" },
+  { n: "02", href: "/af-analysis", label: "Attribution" },
   { n: "03", href: "/ltv", label: "LTV" },
-  { n: "04", href: "/dashboards", label: "Дашборды" },
-  { n: "05", href: "/ai", label: "ИИ-аналитик" },
-  { n: "06", href: "/integrations", label: "Интеграции", badge: "2" },
-  { n: "07", href: "/sync", label: "Синхронизация" },
-  { n: "08", href: "/alerts", label: "Алерты", badge: "4" },
-  { n: "09", href: "/settings", label: "Настройки" },
+  { n: "04", href: "/dashboards", label: "Dashboards" },
+  { n: "05", href: "/ai", label: "AI analyst" },
+  { n: "06", href: "/integrations", label: "Integrations", badge: "2" },
+  { n: "07", href: "/sync", label: "Sync" },
+  { n: "08", href: "/alerts", label: "Alerts", badge: "4" },
+  { n: "09", href: "/settings", label: "Settings" },
 ];
 
 export function Sidebar() {
   const pathname = usePathname();
-  // Авторизация в демо выключена: все заходят как владелец.
+  // Auth is disabled in the demo: everyone is the owner.
   const email = CURRENT_USER;
 
   return (
     <aside className="w-58 shrink-0 border-r border-line bg-surface sticky top-0 h-screen flex flex-col" style={{ width: 232 }}>
-      {/* Логотип */}
+      {/* Logo */}
       <div className="flex items-center gap-2.5" style={{ padding: "22px 20px 18px" }}>
         <LogoMark size={22} />
         <span style={{ fontSize: 14.5, fontWeight: 600, letterSpacing: "-0.01em" }}>Sanalytics</span>
         <span className="mono bg-sunk border border-line text-muted" style={{ fontSize: 9.5, padding: "1px 6px", borderRadius: 99, marginLeft: "auto" }}>demo</span>
       </div>
 
-      {/* Навигация */}
+      {/* Navigation */}
       <nav className="flex flex-col gap-px" style={{ padding: "4px 10px" }}>
         {nav.map((item) => {
           const active = pathname.startsWith(item.href);
@@ -62,7 +62,7 @@ export function Sidebar() {
         })}
       </nav>
 
-      {/* Низ */}
+      {/* Footer */}
       <div className="mt-auto flex flex-col gap-2.5 border-t border-line" style={{ padding: 14 }}>
         <ThemeToggle />
         <div className="flex items-center gap-2.5">

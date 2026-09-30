@@ -13,18 +13,18 @@ export default async function MarketingPage({
 }) {
   const sp = await searchParams;
   const filters = parseFilters(sp);
-  // Период заказа по умолчанию – последние 7 дней (parseFilters -> defaultFilters),
-  // чтобы страница не грузила весь период. Если период явно очищен (from= в URL),
-  // parseFilters вернёт "" и данные посчитаются без фильтра по времени (весь период).
-  // Выручка по умолчанию из Настроек (если в URL не выбрана).
+  // The order period defaults to the last 7 days (parseFilters -> defaultFilters)
+  // so the page doesn't load all history. If the period is cleared explicitly (from= in the URL),
+  // parseFilters returns "" and the data is computed without a time filter (all time).
+  // Revenue basis defaults to Settings (unless chosen in the URL).
   if (sp.basis === undefined) filters.basis = (await getSettings()).revenueBasis;
-  const now = new Date().toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" });
+  const now = new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
 
   return (
     <>
       <AppHeader
-        title="Маркетинг"
-        subtitle="Сводка по продажам и рекламе"
+        title="Marketing"
+        subtitle="Sales and advertising overview"
         live={now}
         actions={<MarketingActions filters={filters} />}
       >

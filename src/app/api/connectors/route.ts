@@ -11,11 +11,11 @@ export async function GET() {
 
 export async function PUT(req: Request) {
   if (!(await canManageConnections())) {
-    return NextResponse.json({ error: "Недостаточно прав. Менять интеграции может владелец или админ." }, { status: 403 });
+    return NextResponse.json({ error: "Not allowed. Only the owner or an admin can change integrations." }, { status: 403 });
   }
   const body = (await req.json().catch(() => ({}))) as { id?: ConnectorId; enabled?: boolean; fields?: Record<string, string> };
   if (!body.id || !CONNECTORS.some((c) => c.id === body.id)) {
-    return NextResponse.json({ error: "Неизвестный коннектор." }, { status: 400 });
+    return NextResponse.json({ error: "Unknown connector." }, { status: 400 });
   }
   const saved = await saveConnector(body.id, { enabled: body.enabled, fields: body.fields });
   return NextResponse.json({ ok: true, connector: viewOf(saved) });

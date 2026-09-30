@@ -11,8 +11,8 @@ type AfAppTotal = { id: string; platform: AfPlatform; installs: number; cost: nu
 type AfSync = { at: string; from: string; to: string; rows: AfSourceRow[]; byApp: AfAppTotal[]; totalInstalls: number; totalCost: number; note?: string };
 type Payload = { config: AfConfigView; lastSync: AfSync | null; canManage: boolean };
 
-const PLATFORM_LABEL: Record<AfPlatform, string> = { android: "Android", ios: "iOS", other: "Другое" };
-const nf = new Intl.NumberFormat("ru-RU");
+const PLATFORM_LABEL: Record<AfPlatform, string> = { android: "Android", ios: "iOS", other: "Other" };
+const nf = new Intl.NumberFormat("en-US");
 function fmtDate(d: Date) { return d.toISOString().slice(0, 10); }
 
 function Pill({ text, kind }: { text: string; kind: "ok" | "error" | "soon" }) {
@@ -44,8 +44,8 @@ export function AppsFlyerCard() {
         body: JSON.stringify({ from, to }),
       });
       const d = await r.json();
-      if (d.ok) { setMsg({ ok: true, text: `Готово: установок ${nf.format(d.sync.totalInstalls)} по ${d.sync.rows.length} источникам` }); load(); }
-      else setMsg({ ok: false, text: d.error || "ошибка синхронизации" });
+      if (d.ok) { setMsg({ ok: true, text: `Done: ${nf.format(d.sync.totalInstalls)} installs from ${d.sync.rows.length} sources` }); load(); }
+      else setMsg({ ok: false, text: d.error || "sync error" });
     } catch (e) { setMsg({ ok: false, text: String(e).slice(0, 160) }); }
     finally { setSyncing(false); }
   }
@@ -60,27 +60,27 @@ export function AppsFlyerCard() {
           <span className="mono flex items-center justify-center bg-sunk border border-line" style={{ width: 30, height: 30, borderRadius: 7, fontSize: 12, fontWeight: 600 }}>AF</span>
           <div className="flex-1">
             <div style={{ fontSize: 13.5, fontWeight: 600 }}>AppsFlyer</div>
-            <div className="text-muted" style={{ fontSize: 11.5 }}>MMP · установки и медиа-источники</div>
+            <div className="text-muted" style={{ fontSize: 11.5 }}>MMP · installs and media sources</div>
           </div>
-          {cfg ? (cfg.configured ? <Pill text="подключён" kind="ok" /> : <Pill text="не настроен" kind="soon" />) : <Pill text="…" kind="soon" />}
+          {cfg ? (cfg.configured ? <Pill text="connected" kind="ok" /> : <Pill text="not configured" kind="soon" />) : <Pill text="…" kind="soon" />}
         </div>
 
         <p className="text-ink-2" style={{ fontSize: 12.5, lineHeight: 1.5 }}>
-          Агрегатный отчёт Pull API v2 (медиа-источник × дата) по всем приложениям: показы, клики, установки, расход.
+          Aggregate Pull API v2 report (media source × date) across all apps: impressions, clicks, installs, spend.
         </p>
 
         {cfg?.configured && (
           <div className="flex flex-wrap items-end gap-2 border-t border-line" style={{ paddingTop: 11 }}>
             <label className="flex flex-col gap-1">
-              <span className="text-muted" style={{ fontSize: 10.5 }}>с</span>
+              <span className="text-muted" style={{ fontSize: 10.5 }}>from</span>
               <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="border border-line bg-surface rounded-lg mono" style={{ padding: "5px 7px", fontSize: 12 }} />
             </label>
             <label className="flex flex-col gap-1">
-              <span className="text-muted" style={{ fontSize: 10.5 }}>по</span>
+              <span className="text-muted" style={{ fontSize: 10.5 }}>to</span>
               <input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="border border-line bg-surface rounded-lg mono" style={{ padding: "5px 7px", fontSize: 12 }} />
             </label>
             <button onClick={sync} disabled={syncing} className="inline-flex items-center gap-1.5 border border-line hover:border-line-2 disabled:opacity-50" style={{ borderRadius: 8, padding: "7px 12px", fontSize: 12.5 }}>
-              {syncing ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />} Синхронизировать
+              {syncing ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />} Sync
             </button>
           </div>
         )}
@@ -96,7 +96,7 @@ export function AppsFlyerCard() {
           <div className="flex flex-wrap gap-x-4 gap-y-1 mono text-muted" style={{ fontSize: 11 }}>
             {last.byApp.map((a) => (
               <span key={a.id} style={a.error ? { color: "var(--neg)" } : undefined}>
-                {PLATFORM_LABEL[a.platform]}: {a.error ? "ошибка" : nf.format(a.installs)}
+                {PLATFORM_LABEL[a.platform]}: {a.error ? "error" : nf.format(a.installs)}
               </span>
             ))}
           </div>
@@ -105,15 +105,15 @@ export function AppsFlyerCard() {
         {last && last.rows.length > 0 && (
           <div className="border-t border-line" style={{ paddingTop: 11 }}>
             <div className="flex items-center justify-between" style={{ marginBottom: 6 }}>
-              <span className="text-muted mono" style={{ fontSize: 11 }}>{last.from} → {last.to} · установок {nf.format(last.totalInstalls)}</span>
+              <span className="text-muted mono" style={{ fontSize: 11 }}>{last.from} → {last.to} · installs {nf.format(last.totalInstalls)}</span>
             </div>
             <table className="w-full" style={{ fontSize: 12 }}>
               <thead>
                 <tr className="text-muted" style={{ textAlign: "left" }}>
-                  <th style={{ fontWeight: 500, paddingBottom: 4 }}>Медиа-источник</th>
-                  <th style={{ fontWeight: 500, textAlign: "right" }}>Установки</th>
-                  <th style={{ fontWeight: 500, textAlign: "right" }}>Клики</th>
-                  {last.totalCost > 0 && <th style={{ fontWeight: 500, textAlign: "right" }}>Расход</th>}
+                  <th style={{ fontWeight: 500, paddingBottom: 4 }}>Media source</th>
+                  <th style={{ fontWeight: 500, textAlign: "right" }}>Installs</th>
+                  <th style={{ fontWeight: 500, textAlign: "right" }}>Clicks</th>
+                  {last.totalCost > 0 && <th style={{ fontWeight: 500, textAlign: "right" }}>Spend</th>}
                 </tr>
               </thead>
               <tbody className="mono">
@@ -133,11 +133,11 @@ export function AppsFlyerCard() {
 
         <div className="border-t border-line flex items-center justify-between" style={{ paddingTop: 11 }}>
           <span className="mono text-muted" style={{ fontSize: 11 }}>
-            {cfg && cfg.apps.length > 0 ? cfg.apps.map((a) => PLATFORM_LABEL[a.platform]).join(" · ") : "приложения не заданы"}
+            {cfg && cfg.apps.length > 0 ? cfg.apps.map((a) => PLATFORM_LABEL[a.platform]).join(" · ") : "no apps set"}
           </span>
           {data?.canManage && (
             <button onClick={() => setEditing(true)} className="inline-flex items-center gap-1.5 text-muted hover:text-ink" style={{ fontSize: 12 }}>
-              <Settings2 size={13} /> Настроить
+              <Settings2 size={13} /> Configure
             </button>
           )}
         </div>
@@ -172,7 +172,7 @@ function AfEditor({ initial, onClose, onSaved }: { initial: AfConfigView; onClos
         body: JSON.stringify({ apps: apps.filter((a) => a.id.trim()), timezone, token: tokenTouched ? token : null }),
       });
       const d = await r.json();
-      if (!r.ok) { setErr(d.error || "не удалось сохранить"); return; }
+      if (!r.ok) { setErr(d.error || "could not save"); return; }
       onSaved();
     } catch (e) { setErr(String(e).slice(0, 160)); }
     finally { setBusy(false); }
@@ -188,42 +188,42 @@ function AfEditor({ initial, onClose, onSaved }: { initial: AfConfigView; onClos
         </div>
         <div className="flex flex-col gap-3" style={{ padding: 18 }}>
           <div className="flex flex-col gap-2">
-            <span className="text-muted" style={{ fontSize: 11.5 }}>Приложения (App ID из AF)</span>
+            <span className="text-muted" style={{ fontSize: 11.5 }}>Apps (App ID from AF)</span>
             {apps.map((a, i) => (
               <div key={i} className="flex items-center gap-2">
                 <select value={a.platform} onChange={(e) => setApp(i, { platform: e.target.value as AfPlatform })} className="border border-line bg-surface rounded-lg" style={{ padding: "8px 8px", fontSize: 12.5 }}>
                   <option value="android">Android</option>
                   <option value="ios">iOS</option>
-                  <option value="other">Другое</option>
+                  <option value="other">Other</option>
                 </select>
                 <input value={a.id} onChange={(e) => setApp(i, { id: e.target.value })} placeholder={a.platform === "ios" ? "id123456789" : "com.example.shop"} className="border border-line bg-surface rounded-lg mono flex-1" style={field} />
                 {apps.length > 1 && (
-                  <button onClick={() => removeApp(i)} className="text-muted hover:text-[color:var(--neg)]" aria-label="удалить"><Trash2 size={15} /></button>
+                  <button onClick={() => removeApp(i)} className="text-muted hover:text-[color:var(--neg)]" aria-label="delete"><Trash2 size={15} /></button>
                 )}
               </div>
             ))}
             <button onClick={addApp} className="inline-flex items-center gap-1.5 text-muted hover:text-ink self-start" style={{ fontSize: 12 }}>
-              <Plus size={13} /> Добавить приложение
+              <Plus size={13} /> Add app
             </button>
           </div>
 
           <label className="flex flex-col gap-1">
-            <span className="text-muted" style={{ fontSize: 11.5 }}>Часовой пояс (необязательно)</span>
+            <span className="text-muted" style={{ fontSize: 11.5 }}>Time zone (optional)</span>
             <input value={timezone} onChange={(e) => setTimezone(e.target.value)} placeholder="Asia/Almaty" className="border border-line bg-surface rounded-lg mono" style={field} />
           </label>
           <label className="flex flex-col gap-1">
-            <span className="text-muted" style={{ fontSize: 11.5 }}>Токен Pull API v2 (Bearer) – один на аккаунт</span>
+            <span className="text-muted" style={{ fontSize: 11.5 }}>Pull API v2 token (Bearer), one per account</span>
             <input type="password" value={token} onChange={(e) => { setToken(e.target.value); setTokenTouched(true); }}
-              placeholder={initial.hasToken ? "•••••••• (сохранён, оставьте пустым чтобы не менять)" : "вставьте токен из AF Security Center"}
+              placeholder={initial.hasToken ? "•••••••• (saved, leave empty to keep)" : "paste the token from AF Security Center"}
               className="border border-line bg-surface rounded-lg mono" style={field} />
           </label>
           {err && <div style={{ fontSize: 12.5, color: "var(--neg)" }}>{err}</div>}
-          <p className="text-muted" style={{ fontSize: 11 }}>Токен один для всех приложений аккаунта, хранится на сервере и в браузер не отдаётся. В демо-режиме Pull API не вызывается.</p>
+          <p className="text-muted" style={{ fontSize: 11 }}>One token for all apps in the account, stored on the server and never sent to the browser. In demo mode the Pull API is not called.</p>
         </div>
         <div className="flex items-center justify-end gap-2 border-t border-line" style={{ padding: "14px 18px" }}>
-          <button onClick={onClose} className="border border-line hover:border-line-2" style={{ borderRadius: 8, padding: "8px 14px", fontSize: 13 }}>Отмена</button>
+          <button onClick={onClose} className="border border-line hover:border-line-2" style={{ borderRadius: 8, padding: "8px 14px", fontSize: 13 }}>Cancel</button>
           <button onClick={save} disabled={busy || apps.every((a) => !a.id.trim())} className="inline-flex items-center gap-1.5 disabled:opacity-50 text-[color:var(--accent-ink)]" style={{ background: "var(--accent)", borderRadius: 8, padding: "8px 16px", fontSize: 13, fontWeight: 500 }}>
-            {busy && <Loader2 size={14} className="animate-spin" />} Сохранить
+            {busy && <Loader2 size={14} className="animate-spin" />} Save
           </button>
         </div>
       </div>

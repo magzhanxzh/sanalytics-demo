@@ -35,14 +35,14 @@ export function ConnectorsPanel() {
     setTesting("telegram"); setResult((r) => ({ ...r, telegram: undefined as never }));
     try {
       const d = await (await fetch("/api/connectors/telegram-test", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" })).json();
-      setResult((r) => ({ ...r, telegram: { ok: !!d.ok, text: d.ok ? "сообщение отправлено" : (d.error || "ошибка") } }));
+      setResult((r) => ({ ...r, telegram: { ok: !!d.ok, text: d.ok ? "message sent" : (d.error || "error") } }));
     } catch (e) { setResult((r) => ({ ...r, telegram: { ok: false, text: String(e).slice(0, 140) } })); }
     finally { setTesting(null); }
   }
 
-  if (!data) return <div className="text-muted" style={{ fontSize: 13 }}>Загрузка…</div>;
+  if (!data) return <div className="text-muted" style={{ fontSize: 13 }}>Loading…</div>;
   const specById = (id: string) => data.specs.find((s) => s.id === id)!;
-  // Рекламные площадки вынесены в «Рекламные кабинеты» (по странам); здесь – уведомления.
+  // Ad platforms live in Ad accounts (per country); this panel is for notifications.
   const notifyConnectors = data.connectors.filter((v) => specById(v.id)?.kind === "notify");
 
   return (
@@ -50,9 +50,9 @@ export function ConnectorsPanel() {
       {notifyConnectors.map((v) => {
         const spec = specById(v.id);
         const res = result[v.id];
-        const pill = v.enabled && v.configured ? <Pill text="подключён" kind="ok" />
-          : v.configured ? <Pill text="настроен" kind="warn" />
-          : <Pill text="не настроен" kind="soon" />;
+        const pill = v.enabled && v.configured ? <Pill text="connected" kind="ok" />
+          : v.configured ? <Pill text="configured" kind="warn" />
+          : <Pill text="not configured" kind="soon" />;
         return (
           <div key={v.id} className="border border-line bg-surface rounded-xl flex flex-col" style={{ padding: 16, gap: 12 }}>
             <div className="flex items-center gap-3">
@@ -77,18 +77,18 @@ export function ConnectorsPanel() {
                 <>
                   <label className="flex items-center gap-1.5 cursor-pointer text-muted" style={{ fontSize: 12 }}>
                     <input type="checkbox" checked={v.enabled} disabled={!v.configured} onChange={(e) => toggle(v.id, e.target.checked)} />
-                    Включён
+                    Enabled
                   </label>
                   <div className="flex items-center gap-2">
                     <button onClick={telegramTest} disabled={!v.configured || testing === v.id} className="inline-flex items-center gap-1 text-muted hover:text-ink disabled:opacity-40" style={{ fontSize: 12 }}>
-                      {testing === v.id ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />} Тест
+                      {testing === v.id ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />} Test
                     </button>
                     <button onClick={() => setEditing(v.id)} className="inline-flex items-center gap-1 text-muted hover:text-ink" style={{ fontSize: 12 }}>
-                      <Settings2 size={13} /> Настроить
+                      <Settings2 size={13} /> Configure
                     </button>
                   </div>
                 </>
-              ) : <span className="text-muted mono" style={{ fontSize: 11 }}>только чтение</span>}
+              ) : <span className="text-muted mono" style={{ fontSize: 11 }}>read only</span>}
             </div>
           </div>
         );
@@ -120,7 +120,7 @@ function ConnectorEditor({ spec, view, onClose, onSaved }: { spec: Spec; view: V
     try {
       const r = await fetch("/api/connectors", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: spec.id, fields }) });
       const d = await r.json();
-      if (!r.ok) { setErr(d.error || "не удалось сохранить"); return; }
+      if (!r.ok) { setErr(d.error || "could not save"); return; }
       onSaved();
     } catch (e) { setErr(String(e).slice(0, 160)); }
     finally { setBusy(false); }
@@ -137,23 +137,23 @@ function ConnectorEditor({ spec, view, onClose, onSaved }: { spec: Spec; view: V
         <div className="flex flex-col gap-3" style={{ padding: 18 }}>
           {spec.fields.map((f) => (
             <label key={f.key} className="flex flex-col gap-1">
-              <span className="text-muted" style={{ fontSize: 11.5 }}>{f.label}{f.optional ? " (необязательно)" : ""}</span>
+              <span className="text-muted" style={{ fontSize: 11.5 }}>{f.label}{f.optional ? " (optional)" : ""}</span>
               <input
                 type={f.secret ? "password" : "text"}
                 value={fields[f.key]}
                 onChange={(e) => setFields((x) => ({ ...x, [f.key]: e.target.value }))}
-                placeholder={f.secret && view.secretsSet[f.key] ? "•••••••• (сохранён, оставьте пустым)" : (f.placeholder ?? "")}
+                placeholder={f.secret && view.secretsSet[f.key] ? "•••••••• (saved, leave empty to keep)" : (f.placeholder ?? "")}
                 className="border border-line bg-surface rounded-lg mono" style={field}
               />
             </label>
           ))}
           {err && <div style={{ fontSize: 12.5, color: "var(--neg)" }}>{err}</div>}
-          <p className="text-muted" style={{ fontSize: 11 }}>Секреты хранятся на сервере (data/), в браузер не отдаются. После сохранения нажмите «Проверить», затем «Включён».</p>
+          <p className="text-muted" style={{ fontSize: 11 }}>Secrets are stored on the server (data/) and never sent to the browser. After saving, click “Test”, then “Enabled”.</p>
         </div>
         <div className="flex items-center justify-end gap-2 border-t border-line" style={{ padding: "14px 18px" }}>
-          <button onClick={onClose} className="border border-line hover:border-line-2" style={{ borderRadius: 8, padding: "8px 14px", fontSize: 13 }}>Отмена</button>
+          <button onClick={onClose} className="border border-line hover:border-line-2" style={{ borderRadius: 8, padding: "8px 14px", fontSize: 13 }}>Cancel</button>
           <button onClick={save} disabled={busy} className="inline-flex items-center gap-1.5 disabled:opacity-50 text-[color:var(--accent-ink)]" style={{ background: "var(--accent)", borderRadius: 8, padding: "8px 16px", fontSize: 13, fontWeight: 500 }}>
-            {busy && <Loader2 size={14} className="animate-spin" />} Сохранить
+            {busy && <Loader2 size={14} className="animate-spin" />} Save
           </button>
         </div>
       </div>

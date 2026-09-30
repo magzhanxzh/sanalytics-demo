@@ -1,45 +1,49 @@
-# Sanalytics (демо)
+# Sanalytics (demo)
 
-Sanalytics это BI-платформа для маркетинга e-commerce. Она собирает заказы, регистрации, данные MMP и расход рекламных кабинетов в один слой метрик, а поверх него строит дашборды, когортный LTV, алерты и ИИ-аналитика.
+English · [Русский](README.ru.md)
 
-Это публичная демо-копия. Все цифры синтетические: их генерирует детерминированный генератор с фиксированным seed. Продакшен-версия работает на ClickHouse + PostgreSQL + Supabase + AppsFlyer. В демо эти сервисы заменены хранилищем в памяти, а интерфейсы слоя данных остались теми же, поэтому экраны, кеш и резолвер дашбордов работают без изменений.
+**Live demo:** _link coming soon_
 
-## Возможности
+Sanalytics is a BI platform for e-commerce marketing teams. It combines orders, sign-ups, MMP attribution and ad spend into a single metrics layer, and builds dashboards, cohort LTV, alerts and an AI analyst on top of it.
 
-- **Маркетинг.** KPI со сравнением с прошлым периодом и спарклайнами, график по дням, неделям и месяцам, фильтры по стране, каналу заказа, каналу регистрации, B2B и типу выручки, когортный режим по периоду регистрации с конверсией, воронка, каналы привлечения с ROAS, экспорт среза в Excel.
-- **AF анализ.** Таргет против органики по карте MMP (user_id -> канал): регистрации, покупатели, CR, выручка, расход, CAC и ROAS по каналам и кампаниям, расход и регистрации по дням для каждого кабинета.
-- **LTV.** Когортная ценность клиента на регистранта и на покупателя, кривые по месяцам жизни, распределение по размеру LTV, итоги по когортам, треугольная матрица.
-- **Конструктор дашбордов.** Виджеты KPI, линия, область, столбцы, пирог, таблица и текст. Drag-and-drop и ресайз, фильтры уровня дашборда с наследованием, дублирование виджетов, метрика реактивации с настраиваемой спячкой. Общие дашборды открываются только для чтения.
-- **ИИ-аналитик.** Claude с инструментами `get_metrics` и `get_channels` поверх слоя метрик. Агент отвечает только по числам из инструментов и показывает, какой срез взял. Без ключа Anthropic чат отвечает шаблоном, но по настоящим числам слоя метрик.
-- **Алерты.** Правила на метрики, проверка на текущих данных, доставка в Telegram с антиспамом (уведомление на фронте срабатывания и не чаще раза в 6 часов).
-- **Интеграции.** ClickHouse, PostgreSQL, AppsFlyer (несколько приложений на один токен), рекламные кабинеты Google Ads, Meta Ads, TikTok Ads и Yandex Direct по странам, Telegram. Секреты не уходят в браузер.
-- **Синхронизация.** Кеш слоя метрик с TTL 10 минут, прогрев дефолтного среза по расписанию, журнал запусков.
-- **Роли и гео-доступ.** Владелец, админ, маркетолог, наблюдатель. Маркетолог видит только свои страны: ограничение применяется в слое метрик, дашбордах, экспорте и инструментах ИИ.
+This is a public demo. All numbers are synthetic and come from a deterministic generator with a fixed seed. The production version runs on ClickHouse + PostgreSQL + Supabase + AppsFlyer. In the demo those services are replaced by an in-memory store behind the same data-layer interfaces, so the screens, the cache and the dashboard resolver are unchanged.
 
-## Архитектура
+## Features
+
+- **Marketing.** KPIs with period comparison and sparklines, a chart by day, week or month, filters by country, order channel, sign-up channel, B2B and revenue basis, a cohort mode by sign-up period with conversion, a funnel, acquisition channels with ROAS, and Excel export of the current slice.
+- **Attribution.** Paid vs organic from the MMP map (user_id -> channel): sign-ups, buyers, CR, revenue, spend, CAC and ROAS by channel and campaign, plus daily spend and sign-ups for each ad account.
+- **LTV.** Cohort customer value per sign-up and per buyer, curves by month of life, distribution by LTV size, cohort totals and a triangle matrix.
+- **Dashboard builder.** KPI, line, area, bar, pie, table and text widgets. Drag-and-drop and resize, dashboard-level filters with inheritance, widget duplication, and a reactivation metric with configurable dormancy. Shared dashboards open read-only.
+- **AI analyst.** Claude with `get_metrics` and `get_channels` tools over the metrics layer. The agent answers only with numbers from its tools and shows which slice it used. Without an Anthropic key the chat returns a templated answer, still built from real metrics-layer numbers.
+- **Alerts.** Metric rules checked against current data, delivered to Telegram with anti-spam (notifies on the rising edge and at most once every 6 hours).
+- **Integrations.** ClickHouse, PostgreSQL, AppsFlyer (several apps per token), Google Ads, Meta Ads, TikTok Ads and Yandex Direct ad accounts per country, Telegram. Secrets never reach the browser.
+- **Sync.** Metrics cache with a 10-minute TTL, scheduled warm-up of the default slice, and a run log.
+- **Roles and geo access.** Owner, admin, marketer, viewer. A marketer sees only their countries: the restriction is enforced in the metrics layer, dashboards, export and AI tools.
+
+## Architecture
 
 ```mermaid
 flowchart LR
-  subgraph Sources[Источники]
-    CH[(ClickHouse<br/>заказы)]
-    PG[(PostgreSQL<br/>пользователи)]
+  subgraph Sources[Data sources]
+    CH[(ClickHouse<br/>orders)]
+    PG[(PostgreSQL<br/>users)]
     AF[AppsFlyer<br/>Pull API]
     ADS[Google / Meta /<br/>TikTok / Yandex]
   end
-  subgraph Connectors[Коннекторы]
-    Q[Запросы к хранилищу]
-    MAP[Суточная карта MMP<br/>user_id -> канал]
-    SPEND[Синк расхода<br/>по странам]
+  subgraph Connectors
+    Q[Warehouse queries]
+    MAP[Daily MMP map<br/>user_id -> channel]
+    SPEND[Spend sync<br/>per country]
   end
-  subgraph Core[Ядро]
-    M[Слой метрик<br/>src/lib/metrics.ts]
-    C[(Кеш + журнал<br/>src/lib/cache.ts)]
+  subgraph Core
+    M[Metrics layer<br/>src/lib/metrics.ts]
+    C[(Cache + run log<br/>src/lib/cache.ts)]
   end
-  subgraph UI[Потребители]
-    MK[Маркетинг / LTV / AF анализ]
-    D[Дашборды<br/>resolveWidget]
-    AL[Алерты]
-    AI[ИИ-агент<br/>Claude tool use]
+  subgraph UI[Consumers]
+    MK[Marketing / LTV / Attribution]
+    D[Dashboards<br/>resolveWidget]
+    AL[Alerts]
+    AI[AI agent<br/>Claude tool use]
   end
   CH --> Q
   PG --> Q
@@ -55,105 +59,93 @@ flowchart LR
   M --> AI
 ```
 
-В демо блок «Источники» заменяет `src/lib/demo/`: генератор создаёт примерно 125 тысяч пользователей и столько же заказов с 2024 года по сегодня и хранит их колонками в typed arrays. Запросы слоя метрик выполняются как сканы по этим колонкам и отдают те же агрегаты, что SQL в продакшене.
+In the demo, the Data sources block is replaced by `src/lib/demo/`: the generator creates about 125 thousand users and as many orders from 2024 to today and stores them as columns in typed arrays. Metrics-layer queries run as scans over these columns and return the same aggregates as the SQL in production.
 
-## Стек
+## Stack
 
 - Next.js 16 (App Router), React 19, TypeScript
 - Tailwind CSS 4, Recharts, lucide-react, react-grid-layout, react-day-picker
-- exceljs для экспорта
+- exceljs for export
 - Anthropic SDK (Claude, tool use)
-- В продакшене: ClickHouse, PostgreSQL, Supabase (Auth + RLS + Realtime), AppsFlyer Pull API, API рекламных кабинетов
+- In production: ClickHouse, PostgreSQL, Supabase (Auth + RLS + Realtime), AppsFlyer Pull API, ad platform APIs
 
-## Демо-режим
+## Demo mode
 
-- Нет внешних сервисов: ни базы, ни Supabase, ни AppsFlyer, ни рекламных API. Приложение запускается офлайн.
-- Входа нет. Все заходят как владелец `demo@sanalytics.dev`.
-- Дашборды, алерты, настройки, кабинеты и пользователи хранятся в памяти процесса. После перезапуска сервера возвращается демо-содержимое.
-- Проверка кабинетов, синк AppsFlyer и тест Telegram отвечают синтетикой и ничего не отправляют. Настоящие API-клиенты лежат в `src/lib/connectors/providers.ts` и `src/lib/appsflyer/pull.ts`, их включает переменная `SANALYTICS_LIVE_CONNECTORS=1`.
-- Подключение к базе на экране Интеграций не настраивается.
+- No external services: no database, Supabase, AppsFlyer or ad APIs. The app runs offline.
+- No sign-in. Everyone is the owner `demo@sanalytics.dev`.
+- Dashboards, alerts, settings, ad accounts and users live in process memory. After a server restart the demo content comes back.
+- Ad account checks, the AppsFlyer sync and the Telegram test return synthetic data and send nothing. The real API clients live in `src/lib/connectors/providers.ts` and `src/lib/appsflyer/pull.ts` and are enabled by `SANALYTICS_LIVE_CONNECTORS=1`.
+- The database connection is not configurable on the Integrations screen.
 
-## Запуск
+## Running locally
 
 ```bash
 npm install
 npm run dev
 ```
 
-Открыть http://localhost:3000. Лендинг на `/`, приложение начинается с `/marketing`.
+Open http://localhost:3000. The landing page is at `/`, the app starts at `/marketing`.
 
-Необязательные переменные (см. `.env.example`):
+Optional variables (see `.env.example`):
 
-- `ANTHROPIC_API_KEY` включает настоящий ответ Claude в ИИ-аналитике.
-- `SANALYTICS_LIVE_CONNECTORS=1` включает настоящие API-клиенты коннекторов.
+- `ANTHROPIC_API_KEY` enables real Claude answers in the AI analyst.
+- `SANALYTICS_LIVE_CONNECTORS=1` enables the real connector API clients.
 
-Проверки:
+Checks:
 
 ```bash
 npm run typecheck
 npm run build
 ```
 
-## Структура проекта
+## Project structure
 
 ```
 src/
   app/
-    page.tsx              лендинг
-    (app)/                экраны приложения с сайдбаром
+    page.tsx              landing page
+    (app)/                app screens with the sidebar
       marketing/ af-analysis/ ltv/ dashboards/ ai/
       integrations/ sync/ alerts/ settings/
-    api/                  route handlers (метрики, дашборды, алерты, экспорт, ИИ, коннекторы)
-  components/             UI: KPI, графики, фильтры, конструктор, интеграции
+    api/                  route handlers (metrics, dashboards, alerts, export, AI, connectors)
+  components/             UI: KPIs, charts, filters, builder, integrations
   lib/
-    metrics.ts            слой метрик (карточки, ряды, каналы, страны, реактивация)
-    cache.ts              кеш с TTL и журнал запусков
-    warm.ts               прогрев по расписанию (instrumentation.ts)
-    queries/cards.ts      фильтры, разбор URL, форматирование
-    dashboards/           модель, хранилище, резолвер данных виджета
-    appsflyer/            карта MMP, анализ таргет/органика, Pull API клиент
-    connectors/           кабинеты по странам, слой расхода, API-клиенты
-    ltv/                  когортный LTV
-    alerts/               правила, оценка, доставка
-    ai/agent.ts           ИИ-агент с инструментами
-    auth/                 роли и гео-доступ
-    demo/                 генератор синтетических данных и демо-хранилища
+    metrics.ts            metrics layer (cards, series, channels, countries, reactivation)
+    cache.ts              TTL cache and run log
+    warm.ts               scheduled warm-up (instrumentation.ts)
+    queries/cards.ts      filters, URL parsing, formatting
+    dashboards/           model, store, widget data resolver
+    appsflyer/            MMP map, paid vs organic analysis, Pull API client
+    connectors/           ad accounts per country, spend layer, API clients
+    ltv/                  cohort LTV
+    alerts/               rules, evaluation, delivery
+    ai/agent.ts           AI agent with tools
+    auth/                 roles and geo access
+    demo/                 synthetic data generator and demo stores
 ```
 
-## Скриншоты
+## Screenshots
 
-Лендинг
+Landing page
 
-![Лендинг](docs/screenshots/01-landing.png)
+![Landing page](docs/screenshots/01-landing.png)
 
-Маркетинг
+Marketing
 
-![Маркетинг](docs/screenshots/02-marketing.png)
+![Marketing](docs/screenshots/02-marketing.png)
 
-Конструктор дашбордов
+Dashboard builder
 
-![Конструктор дашбордов](docs/screenshots/03-dashboard-constructor.png)
+![Dashboard builder](docs/screenshots/03-dashboard-constructor.png)
 
-AF анализ
+Attribution
 
-![AF анализ](docs/screenshots/04-af-analysis.png)
+![Attribution](docs/screenshots/04-af-analysis.png)
 
 LTV
 
 ![LTV](docs/screenshots/05-ltv.png)
 
-Алерты
+Alerts
 
-![Алерты](docs/screenshots/06-alerts.png)
-
----
-
-## English
-
-Sanalytics is a BI platform for e-commerce marketing teams. It combines orders, sign-ups, MMP attribution and ad spend into a single metrics layer, and builds dashboards, cohort LTV, alerts and an AI analyst on top of it.
-
-This repository is a public demo. All numbers are synthetic and come from a seeded, deterministic generator. The production version runs on ClickHouse, PostgreSQL, Supabase and AppsFlyer. Here those services are replaced by an in-memory columnar store behind the same data-layer interfaces, so the screens, the metrics cache and the dashboard resolver are unchanged.
-
-What you can try: the marketing overview with period comparison and cohort mode, target vs organic analysis with CAC and ROAS per channel and campaign, cohort LTV curves and matrix, a drag-and-drop dashboard builder, rule-based alerts, and an AI analyst that uses tools over the metrics layer (Claude if `ANTHROPIC_API_KEY` is set, a templated answer with real demo numbers otherwise).
-
-Run it with `npm install && npm run dev`, then open http://localhost:3000. No external services or keys are needed. Auth is disabled and everyone is the owner. Stores live in memory and reset on restart. Connector checks and syncs return synthetic data; set `SANALYTICS_LIVE_CONNECTORS=1` to use the real API clients.
+![Alerts](docs/screenshots/06-alerts.png)

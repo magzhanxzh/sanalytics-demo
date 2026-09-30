@@ -6,18 +6,18 @@ import { queryAcquisition, dayOf } from "@/lib/demo/warehouse";
 import { AD_SOURCES } from "@/lib/demo/dims";
 import type { CardFilters } from "@/lib/queries/cards";
 
-// «Каналы привлечения» для Маркетинга. Расход берётся из подключённых рекламных кабинетов
-// за период, заказы и выручка периода раскладываются по рекламному источнику, через который
-// пользователь пришёл (атрибуция MMP хранится на пользователе). Так объёмы таблицы
-// сопоставимы с KPI-карточками: это те же заказы периода, только размеченные по каналам.
-// Показываем только каналы с расходом, т.е. с подключённым кабинетом.
+// "Acquisition channels" for Marketing. Spend comes from connected ad accounts for the period;
+// the period's orders and revenue are split by the ad source the user came from
+// (MMP attribution is stored on the user). This keeps table volumes comparable
+// to the KPI cards: they are the same period orders, just labelled by channel.
+// Only channels with spend are shown, i.e. with a connected ad account.
 
 export type AcqChannel = { name: string; spend: number; revenue: number; orders: number; buyers: number; cac: number; roas: number };
 export type AcqResult = {
-  connected: boolean;              // есть ли хоть один включённый кабинет
+  connected: boolean;              // whether at least one ad account is enabled
   channels: AcqChannel[];
   totalSpend: number; totalRevenue: number; roas: number;
-  paidOrdersShare?: number;        // доля заказов периода, пришедших из платных каналов, %
+  paidOrdersShare?: number;        // share of period orders from paid channels, %
   note?: string;
 };
 
@@ -65,7 +65,7 @@ export async function getAcquisitionChannels(f: CardFilters): Promise<AcqResult>
     connected: true, channels, totalSpend, totalRevenue,
     roas: totalSpend ? totalRevenue / totalSpend : 0,
     paidOrdersShare: total.orders ? (paidOrders / total.orders) * 100 : 0,
-    note: channels.length ? undefined : "Расхода за период нет: подключите кабинет в Интеграциях или расширьте период",
+    note: channels.length ? undefined : "No spend in this period: connect an ad account in Integrations or widen the period",
   };
   cacheSet(key, data);
   return data;

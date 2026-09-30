@@ -9,6 +9,6 @@ export async function GET() {
 
 export async function POST(request: Request) {
   const body = await request.json().catch(() => ({}));
-  const d = await createDashboard(String(body.title ?? "").trim() || "Новый дашборд");
+  const d = await createDashboard(String(body.title ?? "").trim() || "New dashboard");
   return NextResponse.json({ dashboard: d });
 }

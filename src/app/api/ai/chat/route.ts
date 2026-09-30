@@ -9,15 +9,15 @@ export async function POST(request: Request) {
   try {
     body = await request.json();
   } catch {
-    return NextResponse.json({ error: "bad_json", reply: "Некорректный запрос.", toolCalls: [] }, { status: 400 });
+    return NextResponse.json({ error: "bad_json", reply: "Invalid request.", toolCalls: [] }, { status: 400 });
   }
 
   const messages = Array.isArray(body.messages) ? body.messages.slice(-20) : [];
   if (messages.length === 0) {
-    return NextResponse.json({ error: "empty", reply: "Пустой запрос.", toolCalls: [] }, { status: 400 });
+    return NextResponse.json({ error: "empty", reply: "Empty request.", toolCalls: [] }, { status: 400 });
   }
 
-  // Без ключа: демо-ответ по настоящим числам слоя метрик.
+  // Without a key: a demo answer with real numbers from the metrics layer.
   if (!process.env.ANTHROPIC_API_KEY) {
     return NextResponse.json(await runDemoChat(messages));
   }
@@ -27,7 +27,7 @@ export async function POST(request: Request) {
     return NextResponse.json(result);
   } catch (err) {
     return NextResponse.json(
-      { error: "ai_error", reply: "Ошибка при обращении к ИИ: " + String(err), toolCalls: [] },
+      { error: "ai_error", reply: "AI request failed: " + String(err), toolCalls: [] },
       { status: 200 },
     );
   }

@@ -3,15 +3,15 @@ import { getAcquisitionChannels } from "./acquisition";
 import { getChannels } from "@/lib/metrics";
 import type { CardFilters } from "@/lib/queries/cards";
 
-// Короткие инсайты для панели ИИ-аналитика на Маркетинге. Считаются из тех же данных,
-// что и экран: каналы привлечения (ROAS/CAC) и динамика выручки по каналам заказа
-// относительно прошлого периода такой же длины.
+// Short insights for the AI analyst panel on Marketing. Computed from the same data
+// as the screen: acquisition channels (ROAS/CAC) and revenue change by order channel
+// versus the previous period of the same length.
 
 export type Insight = { tag: string; src: string; tone: "pos" | "neg" | "neutral"; text: string; action: string };
 
 const DAY_MS = 86_400_000;
 const iso = (d: Date) => d.toISOString().slice(0, 10);
-const money = (v: number) => "$" + Math.round(v).toLocaleString("ru-RU");
+const money = (v: number) => "$" + Math.round(v).toLocaleString("en-US");
 const pct = (v: number) => (v > 0 ? "+" : "") + v.toFixed(0) + "%";
 
 export async function getMarketingInsights(f: CardFilters): Promise<Insight[]> {
@@ -29,14 +29,14 @@ export async function getMarketingInsights(f: CardFilters): Promise<Insight[]> {
     const best = ranked[ranked.length - 1];
     out.push({
       tag: "ROAS " + worst.roas.toFixed(1), src: worst.name, tone: "neg",
-      text: `Самая слабая окупаемость в портфеле: ${money(worst.spend)} расхода, ${money(worst.revenue)} выручки, CAC $${worst.cac.toFixed(2)}.`,
-      action: "Разобрать кампании",
+      text: `Weakest payback in the portfolio: ${money(worst.spend)} spend, ${money(worst.revenue)} revenue, CAC $${worst.cac.toFixed(2)}.`,
+      action: "Review campaigns",
     });
     const shift = worst.spend * 0.2;
     out.push({
       tag: "ROAS " + best.roas.toFixed(1), src: best.name, tone: "pos",
-      text: `Лучший ROAS за период. Перенос 20% бюджета из ${worst.name} (${money(shift)}) при текущей окупаемости даст ориентировочно +${money(shift * (best.roas - worst.roas))} выручки.`,
-      action: "Смоделировать перенос",
+      text: `Best ROAS in the period. Moving 20% of the budget from ${worst.name} (${money(shift)}) at current payback would add roughly +${money(shift * (best.roas - worst.roas))} revenue.`,
+      action: "Model the shift",
     });
   }
 
@@ -49,9 +49,9 @@ export async function getMarketingInsights(f: CardFilters): Promise<Insight[]> {
   const m = moves[0];
   if (m) {
     out.push({
-      tag: pct(m.d), src: `канал заказа ${m.c.channel}`, tone: m.d >= 0 ? "pos" : "neg",
-      text: `Выручка канала ${m.d >= 0 ? "выросла" : "снизилась"} к прошлому периоду: ${money(before.get(m.c.channel)!)} → ${money(m.c.revenue)}.`,
-      action: "Спросить почему",
+      tag: pct(m.d), src: `order channel ${m.c.channel}`, tone: m.d >= 0 ? "pos" : "neg",
+      text: `Channel revenue ${m.d >= 0 ? "grew" : "fell"} vs the previous period: ${money(before.get(m.c.channel)!)} → ${money(m.c.revenue)}.`,
+      action: "Ask why",
     });
   }
   return out;

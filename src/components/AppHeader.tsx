@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 
-// Шапка контентной области: заголовок + подзаголовок слева, действия справа.
+// Content header: title and subtitle on the left, actions on the right.
 export function AppHeader({
   title,
   subtitle,
@@ -10,9 +10,9 @@ export function AppHeader({
 }: {
   title: string;
   subtitle?: string;
-  live?: string; // напр. "08:45"
+  live?: string; // e.g. "08:45"
   actions?: ReactNode;
-  children?: ReactNode; // вторая строка (фильтры)
+  children?: ReactNode; // second row (filters)
 }) {
   return (
     <header
@@ -48,7 +48,7 @@ export function AppHeader({
   );
 }
 
-// Кнопки шапки
+// Header buttons
 export function HeaderButtons() {
   return null;
 }
