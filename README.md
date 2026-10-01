@@ -2,7 +2,7 @@
 
 English · [Русский](README.ru.md)
 
-**Live demo:** _link coming soon_
+**Live demo:** https://sanalytics-demo.vercel.app
 
 Sanalytics is a BI platform for e-commerce marketing teams. It combines orders, sign-ups, MMP attribution and ad spend into a single metrics layer, and builds dashboards, cohort LTV, alerts and an AI analyst on top of it.
 
