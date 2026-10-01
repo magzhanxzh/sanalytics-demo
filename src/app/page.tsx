@@ -26,8 +26,8 @@ export default function Landing() {
         <span style={{ fontSize: 16, fontWeight: 600, letterSpacing: "-0.01em" }}>Sanalytics</span>
         <span className="mono bg-sunk border border-line text-muted" style={{ fontSize: 10, padding: "2px 7px", borderRadius: 99 }}>demo</span>
         <div className="ml-auto flex items-center gap-3">
-          <div style={{ width: 150 }}><ThemeToggle /></div>
-          <Link href="/marketing" className="inline-flex items-center gap-1.5 text-[color:var(--accent-ink)]" style={{ background: "var(--accent)", borderRadius: 8, padding: "8px 14px", fontSize: 13, fontWeight: 500 }}>
+          <div className="hidden sm:block" style={{ width: 150 }}><ThemeToggle /></div>
+          <Link href="/marketing" className="inline-flex items-center gap-1.5 whitespace-nowrap text-[color:var(--accent-ink)]" style={{ background: "var(--accent)", borderRadius: 8, padding: "8px 14px", fontSize: 13, fontWeight: 500 }}>
             Open demo <ArrowRight size={14} />
           </Link>
         </div>
